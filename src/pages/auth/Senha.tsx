@@ -5,8 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { post } from '../../lib/api';
 import { ErroAlerta } from '../../components/ui';
-import { CartaoAuth, ErroCampo, REGRA_SENHA } from './CartaoAuth';
-import { senhaSchema } from './Registrar';
+import { CartaoAuth, ErroCampo, REGRA_SENHA, senhaSchema } from './CartaoAuth';
 
 export function EsqueciSenha() {
   const [erro, setErro] = useState<unknown>(null);

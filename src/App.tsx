@@ -3,13 +3,14 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout, RequerAdmin } from './components/Layout';
 import { Carregando } from './components/ui';
 import { Login } from './pages/auth/Login';
-import { Registrar } from './pages/auth/Registrar';
 import { EsqueciSenha, RedefinirSenha } from './pages/auth/Senha';
 import { ConfirmarEmail } from './pages/auth/ConfirmarEmail';
 import { Projetos } from './pages/Projetos';
 import { ProjetoLayout } from './pages/projeto/ProjetoLayout';
 import { VisaoGeral } from './pages/projeto/VisaoGeral';
 import { NaoEncontrado } from './pages/NaoEncontrado';
+import { Inicio } from './pages/publico/Inicio';
+import { Cadastro } from './pages/publico/Cadastro';
 
 // Telas maiores carregadas sob demanda
 const Protocolo = lazy(() => import('./pages/projeto/Protocolo'));
@@ -33,15 +34,17 @@ export function App() {
   return (
     <Suspense fallback={<Carregando />}>
       <Routes>
+        {/* páginas abertas: apresentação e aviso de cadastro (as contas são criadas pela OrkneyTech) */}
+        <Route path="/" element={<Inicio />} />
+        <Route path="/registrar" element={<Cadastro />} />
+        <Route path="/cadastro" element={<Navigate to="/registrar" replace />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/registrar" element={<Registrar />} />
         <Route path="/esqueci-senha" element={<EsqueciSenha />} />
         {/* links dos e-mails da API (APP_URL/...) */}
         <Route path="/redefinir-senha" element={<RedefinirSenha />} />
         <Route path="/confirmar-email" element={<ConfirmarEmail />} />
 
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/projetos" replace />} />
           <Route path="/projetos" element={<Projetos />} />
           <Route path="/convites" element={<Convite />} />
           <Route path="/projetos/:projetoId" element={<ProjetoLayout />}>

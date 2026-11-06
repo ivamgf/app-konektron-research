@@ -4,8 +4,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { api, get, patch, put } from '../lib/api';
 import type { Usuario } from '../lib/tipos';
 import { BotaoConfirmar, Cabecalho, ErroAlerta } from '../components/ui';
-import { REGRA_SENHA } from './auth/CartaoAuth';
-import { senhaSchema } from './auth/Registrar';
+import { REGRA_SENHA, senhaSchema } from './auth/CartaoAuth';
 
 /** RF04 (perfil e preferências) e RNF07 (LGPD: exportar e excluir os dados) */
 export default function Perfil() {
