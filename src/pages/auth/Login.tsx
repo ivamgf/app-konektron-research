@@ -76,7 +76,7 @@ export function Login() {
       </form>
       <div className="d-flex justify-content-between mt-3 small">
         <Link to="/esqueci-senha">Esqueci minha senha</Link>
-        <Link to="/registrar">Criar conta</Link>
+        <Link to="/registrar">Cadastrar</Link>
       </div>
     </CartaoAuth>
   );

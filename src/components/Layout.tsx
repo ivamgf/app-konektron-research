@@ -17,6 +17,37 @@ export function Marca({ grande = false }: { grande?: boolean }) {
   );
 }
 
+/** Símbolo KoneKtron do Design System (4. Brand Icons): colorido ou monocromático para fundos escuros */
+export function MarcaKonektron({
+  tamanho = 200,
+  variante = 'cor',
+  titulo = 'KoneKtron',
+  className = '',
+}: {
+  tamanho?: number;
+  variante?: 'cor' | 'mono';
+  titulo?: string;
+  className?: string;
+}) {
+  const laranja = variante === 'mono' ? '#808080' : '#fe7d05';
+  const azul = variante === 'mono' ? '#ffffff' : '#019bcd';
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      width={tamanho}
+      height={tamanho}
+      className={className}
+      role={titulo ? 'img' : undefined}
+      aria-label={titulo || undefined}
+      aria-hidden={titulo ? undefined : true}
+    >
+      <path d="M0 0H31V35H66V66H31V100H0Z" fill={laranja} />
+      <path d="M35 0H100V66H70V31H35Z" fill={azul} />
+      <path d="M35 70H100V100H35Z" fill={azul} />
+    </svg>
+  );
+}
+
 const MENU = [
   { para: '/projetos', icone: 'bi-folder2-open', texto: 'Projetos' },
   { para: '/tipos-revisao', icone: 'bi-diagram-3', texto: 'Tipos de revisão' },

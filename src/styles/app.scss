@@ -242,3 +242,362 @@ $body-color-dark: #e6e6e6;
 .cursor-pointer {
   cursor: pointer;
 }
+
+// ---------------------------------------------------------------- páginas abertas (início e cadastro)
+// Tokens do Design System Konektron 1.0.0 usados aqui
+$k-brand-blue: #019bcd; // brand-color-primary-blue
+$k-brand-orange: #fe7d05; // brand-color-secondary-orange
+$k-brand-neutral: #454d50; // brand-color-neutral
+$k-analogous-b: #0b74e3;
+$k-laranja-texto: #b35500; // laranja com texto branco por cima (4,6:1, WCAG AA)
+
+// Paragraph large (DS 3. Typography)
+.text-large {
+  font-size: 1.125rem;
+  line-height: 1.625rem;
+}
+
+.btn-laranja {
+  @include button-variant(
+    $k-brand-orange,
+    $k-brand-orange,
+    $color: $dark,
+    $hover-background: lighten($k-brand-orange, 8%),
+    $hover-border: lighten($k-brand-orange, 8%),
+    $hover-color: $dark,
+    $active-color: $dark
+  );
+}
+
+.k-publico {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.k-pub-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  nav {
+    min-height: 60px;
+  }
+}
+.k-pub-main {
+  flex: 1 0 auto;
+}
+
+.k-pub-footer {
+  background: $k-secondary-900;
+  color: #fff;
+  padding: 2rem 0;
+  a {
+    color: #fff;
+    text-decoration: none;
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
+  .k-pub-footer-divisor {
+    border-left: 1px solid rgba(#fff, 0.6);
+    align-self: stretch;
+  }
+  .k-pub-footer-logo {
+    text-align: center;
+    font-size: 0.875rem;
+    img,
+    svg {
+      display: block;
+      margin: 0 auto 0.5rem;
+    }
+  }
+  .k-pub-creditos {
+    font-style: italic;
+  }
+}
+
+.k-home {
+  h3 {
+    font-family: $font-family-sans-serif;
+  }
+}
+.k-home-hero {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at 85% 40%, rgba($k-brand-orange, 0.3), transparent 40%),
+    linear-gradient(135deg, $k-secondary-800, $k-secondary-900);
+  // grade técnica sutil (capa do DS)
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(#fff, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(#fff, 0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+}
+// faixa inclinada da capa do DS
+.k-home-hero-forma {
+  position: absolute;
+  right: -8%;
+  top: -20%;
+  width: 40%;
+  height: 140%;
+  background: $k-brand-blue;
+  transform: skewX(-18deg);
+  opacity: 0.85;
+}
+.k-home-selo {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(#fff, 0.15);
+  border: 1px solid rgba(#fff, 0.35);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+}
+// Display huge do DS, crescendo em telas largas
+.k-home-titulo {
+  color: #fff;
+  font-weight: 800;
+  font-size: clamp(2.25rem, 5vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+}
+.k-home-lead {
+  font-size: 1.125rem;
+  line-height: 1.625rem;
+  max-width: 580px;
+}
+.k-home-numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  > div {
+    border-left: 3px solid $k-brand-orange;
+    padding-left: 0.75rem;
+  }
+  dt {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  dd {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+}
+.k-home-cartao {
+  position: relative;
+  z-index: 1;
+  width: 260px;
+  color: $body-color;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 20px 40px rgba(#000, 0.28);
+  transform: rotate(-3deg);
+  animation: k-flutuar 6s ease-in-out infinite;
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid $border-color;
+    color: $gray-600;
+    &:last-child {
+      border-bottom: 0;
+    }
+    &.feita {
+      color: $body-color;
+      .bi {
+        color: $k-secondary-800;
+      }
+    }
+    &.atual {
+      font-weight: 700;
+      color: $dark;
+      .bi {
+        color: $k-brand-orange;
+      }
+    }
+  }
+  .progress-bar {
+    background: $k-secondary-800;
+  }
+}
+@keyframes k-flutuar {
+  50% {
+    transform: rotate(-3deg) translateY(-8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .k-home-cartao {
+    animation: none;
+  }
+}
+
+.k-home-faixa {
+  padding: 3.5rem 0;
+}
+.k-home-secao {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+  &::before {
+    content: '';
+    width: 6px;
+    height: 1.6rem;
+    border-radius: 2px;
+    background: $k-brand-orange;
+  }
+}
+.k-home-sub {
+  color: var(--bs-secondary-color);
+  margin-bottom: 1.75rem;
+}
+
+// Como funciona: faixa laranja com passos numerados
+.k-home-passos {
+  color: #fff;
+  background: linear-gradient(120deg, $k-laranja-texto, #c86400);
+  .k-home-secao {
+    color: #fff;
+    &::before {
+      background: #fff;
+    }
+  }
+  .k-home-sub {
+    color: rgba(#fff, 0.9);
+  }
+  ol {
+    counter-reset: k-passo;
+  }
+}
+.k-home-passo {
+  position: relative;
+  height: 100%;
+  padding: 1.25rem 1.25rem 1.25rem 4.25rem;
+  border-radius: 0.5rem;
+  color: $body-color;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(#000, 0.15);
+  &::before {
+    counter-increment: k-passo;
+    content: counter(k-passo);
+    position: absolute;
+    left: 1.1rem;
+    top: 1.2rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: $k-secondary-800;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.125rem;
+    display: grid;
+    place-items: center;
+  }
+  h3 {
+    font-size: 1.0625rem;
+    color: $dark;
+    margin-bottom: 0.25rem;
+  }
+  p {
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    margin: 0;
+  }
+}
+
+.k-home-recursos {
+  background: $k-secondary-100;
+}
+.k-home-icone {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.35rem;
+  margin-bottom: 0.9rem;
+  background: $k-secondary-800;
+  color: #fff;
+}
+.k-home-recurso {
+  position: relative;
+  height: 100%;
+  padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+  overflow: hidden;
+  background: var(--bs-body-bg);
+  border: 1px solid $k-secondary-200;
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 16px rgba($k-secondary-800, 0.1);
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: $k-secondary-800;
+  }
+  h3 {
+    font-size: 1.0625rem;
+    margin-bottom: 0.35rem;
+  }
+  p {
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    margin: 0;
+  }
+}
+
+// Chamada final: verde e azul da marca
+.k-home-cta {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  border-radius: 0.75rem;
+  background: linear-gradient(110deg, $k-secondary-800 0 55%, $k-analogous-b 55%);
+  box-shadow: 0 12px 30px rgba(#000, 0.18);
+  &::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    top: -40px;
+    width: 200px;
+    height: 200px;
+    border: 28px solid rgba(#fff, 0.15);
+    pointer-events: none;
+  }
+}
+
+// Cartão do aviso de cadastro
+.k-pub-cartao {
+  overflow: hidden;
+  .k-pub-cartao-topo {
+    height: 6px;
+    background: linear-gradient(90deg, $k-secondary-800 0 60%, $k-brand-orange 60% 80%, $k-brand-blue 80%);
+  }
+}
+
+[data-bs-theme='dark'] {
+  .k-home-recursos {
+    background: #262626;
+  }
+  .k-home-recurso {
+    border-color: #4f4f4f;
+  }
+  .k-home-icone {
+    background: $k-secondary-500;
+    color: $k-secondary-900;
+  }
+}
