@@ -313,7 +313,8 @@ export type AnaliseDocumentoDetalhe = {
 export type Tarefa = {
   id: number;
   fila: string;
-  status: 'PENDENTE' | 'PROCESSANDO' | 'CONCLUIDA' | 'ERRO';
+  // a API grava EXECUTANDO enquanto o worker processa
+  status: 'PENDENTE' | 'EXECUTANDO' | 'PROCESSANDO' | 'CONCLUIDA' | 'ERRO';
   erro?: string;
   resultado?: { url?: string; arquivo?: { nomeOriginal: string; mimeType?: string }; [k: string]: unknown };
 };

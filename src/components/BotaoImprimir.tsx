@@ -91,7 +91,7 @@ export function BotaoImprimir({
           </ul>
         )}
       </div>
-      {projeto.url && <LinksDoArquivo url={projeto.url} pdf texto="Abrir PDF do projeto" />}
+      {projeto.url && <LinksDoArquivo url={projeto.url} pdf texto="Abrir PDF do projeto" nome={projeto.nome ?? 'projeto.pdf'} />}
       {projeto.erro && (
         <span className="text-danger small" role="alert">
           {projeto.erro}

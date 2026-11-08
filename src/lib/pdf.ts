@@ -34,3 +34,26 @@ export async function imprimirPdf(url: string) {
 
 export const ehPdf = (arquivo?: { nomeOriginal?: string; mimeType?: string }) =>
   arquivo?.mimeType === 'application/pdf' || /\.pdf$/i.test(arquivo?.nomeOriginal ?? '');
+
+/**
+ * Salva o arquivo no computador com o nome original: baixa como blob (mesma origem, então o atributo
+ * download funciona) e, se o navegador recusar o fetch, pede à API o download direto (?download=1).
+ */
+export async function baixarArquivo(url: string, nome: string) {
+  try {
+    const r = await fetch(url, { credentials: 'omit' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const blobUrl = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
+  } catch {
+    const u = new URL(url);
+    if (u.pathname.endsWith('/arquivos/download')) u.searchParams.set('download', '1');
+    window.open(u.toString(), '_blank', 'noopener');
+  }
+}
