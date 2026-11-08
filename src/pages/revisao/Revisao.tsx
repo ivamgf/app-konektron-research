@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { get, patch, put } from '../../lib/api';
@@ -15,6 +15,7 @@ import { Painel } from './Painel';
 import { Checklist } from './Checklist';
 import { DocumentosDaRevisao } from './DocumentosDaRevisao';
 import { Duplicados } from './Duplicados';
+import { aceitaImportacao, EditarEtapa, ImportarCsvEtapa } from './AcoesEtapa';
 
 const ABAS = [
   { id: 'etapas', texto: 'Etapas', icone: 'bi-signpost-split' },
@@ -88,7 +89,7 @@ export default function Revisao() {
         ))}
       </ul>
       {aba === 'etapas' && <Etapas revisao={r} />}
-      {aba === 'painel' && <Painel revisaoId={r.id} />}
+      {aba === 'painel' && <Painel revisao={r} />}
       {aba === 'checklist' && <Checklist revisaoId={r.id} />}
       {aba === 'documentos' && <DocumentosDaRevisao revisaoId={r.id} />}
     </>
@@ -156,16 +157,16 @@ function PainelEtapa({ revisao, etapa, etapas }: { revisao: TRevisao; etapa: Eta
   const { edita, dono } = useProjetoAtual();
   const qc = useQueryClient();
   const [dispensar, setDispensar] = useState(false);
+  const [editar, setEditar] = useState(false);
+  const [importar, setImportar] = useState(false);
   const [justificativa, setJustificativa] = useState('');
-  const [nome, setNome] = useState(etapa.nome);
-  useEffect(() => setNome(etapa.nome), [etapa.id, etapa.nome]);
   const recarregar = () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: chaves.revisao(revisao.id) }),
       qc.invalidateQueries({ queryKey: chaveEtapas(revisao.id) }),
     ]);
   const acao = useMutation({
-    mutationFn: (corpo: { acao?: string; nome?: string; justificativa?: string }) =>
+    mutationFn: (corpo: { acao?: string; justificativa?: string }) =>
       patch(`/revisoes/${revisao.id}/etapas/${etapa.id}`, corpo),
     onSuccess: async () => {
       setDispensar(false);
@@ -231,6 +232,18 @@ function PainelEtapa({ revisao, etapa, etapas }: { revisao: TRevisao; etapa: Eta
             Reabrir
           </button>
         )}
+        {edita && aceitaImportacao(etapa) && (
+          <button className="btn btn-outline-primary btn-sm" onClick={() => setImportar(true)}>
+            <i className="bi bi-filetype-csv me-1" aria-hidden="true" />
+            Importar CSV
+          </button>
+        )}
+        {edita && (
+          <button className="btn btn-outline-secondary btn-sm" onClick={() => setEditar(true)}>
+            <i className="bi bi-pencil me-1" aria-hidden="true" />
+            Editar etapa
+          </button>
+        )}
       </div>
       <div className="card-body">
         <h3 className="h5">
@@ -254,23 +267,7 @@ function PainelEtapa({ revisao, etapa, etapas }: { revisao: TRevisao; etapa: Eta
 
         {pendente && dono && (
           <div className="border rounded p-3 mb-3 bg-body-tertiary">
-            <div className="small fw-medium mb-2">Ajustar antes de iniciar (RF22)</div>
-            <div className="input-group input-group-sm mb-2" style={{ maxWidth: 480 }}>
-              <input
-                className="form-control"
-                aria-label="Nome da etapa"
-                value={nome}
-                maxLength={120}
-                onChange={(e) => setNome(e.target.value)}
-              />
-              <button
-                className="btn btn-outline-primary"
-                disabled={!nome.trim() || nome === etapa.nome || acao.isPending}
-                onClick={() => acao.mutate({ nome: nome.trim() })}
-              >
-                Renomear
-              </button>
-            </div>
+            <div className="small fw-medium mb-2">Ordem (só antes de iniciar, RF22)</div>
             <div className="btn-group btn-group-sm">
               <button
                 className="btn btn-outline-secondary"
@@ -294,6 +291,8 @@ function PainelEtapa({ revisao, etapa, etapas }: { revisao: TRevisao; etapa: Eta
         {!pendente && <ConteudoEtapa revisao={revisao} etapa={etapa} />}
       </div>
 
+      <EditarEtapa revisaoId={revisao.id} etapa={etapa} aberto={editar} aoFechar={() => setEditar(false)} />
+      <ImportarCsvEtapa revisaoId={revisao.id} etapa={etapa} aberto={importar} aoFechar={() => setImportar(false)} />
       <Modal
         titulo="Dispensar etapa"
         aberto={dispensar}

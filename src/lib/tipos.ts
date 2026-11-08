@@ -315,7 +315,7 @@ export type Tarefa = {
   fila: string;
   status: 'PENDENTE' | 'PROCESSANDO' | 'CONCLUIDA' | 'ERRO';
   erro?: string;
-  resultado?: { url?: string; arquivo?: { nomeOriginal: string }; [k: string]: unknown };
+  resultado?: { url?: string; arquivo?: { nomeOriginal: string; mimeType?: string }; [k: string]: unknown };
 };
 
 export type Notificacao = {
