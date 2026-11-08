@@ -36,14 +36,43 @@ const MODELO =
   '"Scrum for laboratories";"Lee, K.";2021;;"IEEE Software";IEEE Xplore;EXCLUIDO;CRITERIO;Idioma;"fora do idioma do protocolo"\n' +
   '"Kanban in academia";"Costa, C.";2020;;;SciELO;EXCLUIDO;SEM_ACESSO;;\n';
 
-export function baixarModeloCsv() {
+/**
+ * Modelos das planilhas de revisão anterior e de integrados (mesmo formato das abas da planilha da
+ * revisão integrativa): linha de título com o nome da aba e, abaixo, o cabeçalho.
+ */
+export const MODELOS_ORIGEM = {
+  INTEGRADO: {
+    arquivo: 'modelo_integrados.csv',
+    texto:
+      'Integrados,,,,,,,,,,,\n' +
+      'N°,Título,Autores,Resumo,Palavras-chave,Ano,Periódico,Idioma,Link,Como citar,Citações,Base\n' +
+      '1,"Identifiers for the twenty-first century: How to design, provision, and reuse persistent identifiers","McMurry, J. A., Juty, N., Blomberg, N. et al.","Diretrizes para a criação e resolução de identificadores persistentes (PIDs).","Persistent identifiers, Linked Data, FAIR data",2017,"PLOS Biology, 15(6), e2001414",Inglês,https://doi.org/10.1371/journal.pbio.2001414,"MCMURRY, J. A. et al. Identifiers for the twenty-first century: How to design, provision, and reuse persistent identifiers. PLOS Biology, v. 15, n. 6, e2001414, 2017.",~170+,\n',
+  },
+  REVISAO_ANTERIOR: {
+    arquivo: 'modelo_revisao_anterior.csv',
+    texto:
+      'Referencial Teórico,,,,,,,,,,,\n' +
+      'N°,Título,Autores,Resumo,Palavras-chave,Tipo,Ano,Link,Como citar,Referências,Citações,Base\n' +
+      '1,"Doing Data Science: A Framework and Case Study","Sallie Ann Keller, Stephanie S. Shipp, Aaron D. Schroeder, Gizem Korkmaz","Today\'s data revolution is not just about big data.","data science framework, data discovery, ethics",Artigo,2020,,"(KELLER et al., 2020)","KELLER, Sallie Ann et al. Doing data science: A framework and case study. Harvard Data Science Review, v. 2, n. 1, 2020.",43,N/D\n',
+  },
+} as const;
+
+function baixarTexto(texto: string, arquivo: string) {
   // BOM para o Excel abrir com acentos
-  const url = URL.createObjectURL(new Blob(['﻿' + MODELO], { type: 'text/csv;charset=utf-8' }));
+  const url = URL.createObjectURL(new Blob(['﻿' + texto], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'modelo_importacao_etapa.csv';
+  a.download = arquivo;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export function baixarModeloCsv() {
+  baixarTexto(MODELO, 'modelo_importacao_etapa.csv');
+}
+
+export function baixarModeloOrigem(origem: keyof typeof MODELOS_ORIGEM) {
+  baixarTexto(MODELOS_ORIGEM[origem].texto, MODELOS_ORIGEM[origem].arquivo);
 }
 
 function textoDaEtapa(e: EtapaRevisao) {
@@ -60,11 +89,14 @@ export function ImportarCsvEtapa({
   etapa,
   aberto,
   aoFechar,
+  origemInicial = '',
 }: {
   revisaoId: string;
   etapa: EtapaRevisao;
   aberto: boolean;
   aoFechar: () => void;
+  /** já abre com a origem escolhida (cadastro de revisão anterior / integrados) */
+  origemInicial?: '' | 'REVISAO_ANTERIOR' | 'INTEGRADO';
 }) {
   const qc = useQueryClient();
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -73,16 +105,16 @@ export function ImportarCsvEtapa({
   const [iniciar, setIniciar] = useState(true);
   const [relatorio, setRelatorio] = useState<RelatorioImportacao | null>(null);
   // origem dos documentos: '' = busca (passam pela triagem) ou a coluna "Origem" do CSV
-  const [origem, setOrigem] = useState<'' | 'REVISAO_ANTERIOR' | 'INTEGRADO'>('');
+  const [origem, setOrigem] = useState<'' | 'REVISAO_ANTERIOR' | 'INTEGRADO'>(origemInicial);
   useEffect(() => {
     if (!aberto) {
       setArquivo(null);
       setSubstituir(false);
-      setOrigem('');
+      setOrigem(origemInicial);
       setIniciar(true);
       setRelatorio(null);
     }
-  }, [aberto]);
+  }, [aberto, origemInicial]);
 
   const enviar = useMutation({
     mutationFn: async (simular: boolean) => {
@@ -191,10 +223,23 @@ export function ImportarCsvEtapa({
           <option value="REVISAO_ANTERIOR">Revisão anterior — entram direto como incluídos</option>
           <option value="INTEGRADO">Integrados de fonte secundária — entram direto como incluídos</option>
         </select>
-        {origem && (
+        {origem ? (
           <div className="form-text">
             Documentos de revisão anterior e integrados não passam pela triagem e contam como incluídos no painel
-            (RN13). Linhas com a coluna Origem preenchida seguem o valor da coluna.
+            (RN13). Linhas com a coluna Origem preenchida seguem o valor da coluna. Formato da planilha:{' '}
+            <button
+              type="button"
+              className="btn btn-link btn-sm p-0 align-baseline"
+              onClick={() => baixarModeloOrigem(origem)}
+            >
+              baixar modelo de {origem === 'INTEGRADO' ? 'integrados' : 'revisão anterior'}
+            </button>
+            .
+          </div>
+        ) : (
+          <div className="form-text">
+            Planilhas com a linha de título “Integrados” ou “Referencial Teórico” (revisão anterior) são reconhecidas
+            automaticamente.
           </div>
         )}
       </div>
