@@ -47,6 +47,7 @@ vi.mock('../lib/api', async (original) => {
     }),
     put: vi.fn(async (url: string, corpo: unknown) => {
       chamadas.push({ metodo: 'PUT', url, corpo });
+      if (url.endsWith('/decisoes')) return { decididos: 2, ignorados: 0, conflitos: 0, contagens: {} };
       return { contagens: {} };
     }),
   };
@@ -109,6 +110,38 @@ describe('Triagem (UC08)', () => {
         criterioId: 'c1',
         observacao: null,
       }),
+    );
+  });
+
+  it('marca vários documentos e exclui todos pelo mesmo motivo', async () => {
+    montar();
+    await screen.findByRole('heading', { name: 'Ontologia de domínio' });
+    await userEvent.click(screen.getByLabelText('Marcar todos deste filtro (2)'));
+    expect(screen.getByText('2 marcado(s)')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir marcados…' }));
+    await userEvent.click(screen.getByLabelText('Sem acesso'));
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir 2 pelo mesmo motivo' }));
+    await waitFor(() => expect(chamadas.find((c) => c.metodo === 'PUT')).toBeDefined());
+    const put = chamadas.find((c) => c.metodo === 'PUT')!;
+    expect(put.url).toBe('/etapas/e1/decisoes');
+    expect(put.corpo).toEqual({
+      decisao: 'EXCLUIDO',
+      motivo: 'SEM_ACESSO',
+      criterioId: null,
+      observacao: null,
+      ids: ['rd1', 'rd2'],
+    });
+    expect(await screen.findByText(/2 documento\(s\) excluído\(s\)/)).toBeInTheDocument();
+  });
+
+  it('desmarcar um documento tira ele do lote', async () => {
+    montar();
+    await screen.findByRole('heading', { name: 'Ontologia de domínio' });
+    await userEvent.click(screen.getByLabelText('Marcar Dados hidrológicos'));
+    expect(screen.getByText('1 marcado(s)')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Selecionar marcados' }));
+    await waitFor(() =>
+      expect(chamadas.find((c) => c.metodo === 'PUT')?.corpo).toMatchObject({ decisao: 'SELECIONADO', ids: ['rd2'] }),
     );
   });
 });

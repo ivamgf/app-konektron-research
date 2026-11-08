@@ -149,6 +149,8 @@ export type ContagensEtapa = {
   selecionados: number;
   excluidos: number;
   conflitos: number;
+  /** com decisão de um revisor, aguardando a do segundo (dois revisores) */
+  aguardandoRevisor?: number;
   semDecisao: number;
 };
 export type EtapaRevisao = {

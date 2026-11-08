@@ -13,6 +13,7 @@ export type RelatorioImportacao = {
   decisoes: { selecionados: number; excluidos: number; semDecisao: number };
   selecionadosEmEtapasAnteriores: number;
   temasCriados?: number;
+  outrasOrigens?: { revisaoAnterior: number; integrados: number };
   avisos: { linha: number; mensagem: string }[];
   totalAvisos: number;
   simulado: boolean;
@@ -25,7 +26,8 @@ const CATEGORIAS_IMPORTAVEIS = ['BUSCA', 'DEDUPLICACAO', 'TRIAGEM', 'INCLUSAO'];
  * Etapa pendente também aceita: a importação inicia a etapa e conclui as anteriores (triagem feita fora do app).
  */
 export const aceitaImportacao = (e: EtapaRevisao) =>
-  (CATEGORIAS_IMPORTAVEIS.includes(e.categoria) || (e.categoria === 'LIVRE' && (e.exigeTriagem || e.permiteExclusao))) &&
+  (CATEGORIAS_IMPORTAVEIS.includes(e.categoria) ||
+    (e.categoria === 'LIVRE' && (e.exigeTriagem || e.permiteExclusao))) &&
   e.status !== 'DISPENSADA';
 
 const MODELO =
@@ -70,10 +72,13 @@ export function ImportarCsvEtapa({
   const pendente = etapa.status === 'PENDENTE';
   const [iniciar, setIniciar] = useState(true);
   const [relatorio, setRelatorio] = useState<RelatorioImportacao | null>(null);
+  // origem dos documentos: '' = busca (passam pela triagem) ou a coluna "Origem" do CSV
+  const [origem, setOrigem] = useState<'' | 'REVISAO_ANTERIOR' | 'INTEGRADO'>('');
   useEffect(() => {
     if (!aberto) {
       setArquivo(null);
       setSubstituir(false);
+      setOrigem('');
       setIniciar(true);
       setRelatorio(null);
     }
@@ -86,7 +91,12 @@ export function ImportarCsvEtapa({
       fd.append('substituir', String(substituir));
       fd.append('simular', String(simular));
       if (pendente) fd.append('iniciar', String(iniciar));
-      return (await api.post<RelatorioImportacao>(`/revisoes/${revisaoId}/etapas/${etapa.id}/importar`, fd, { timeout: 120_000 })).data;
+      if (origem) fd.append('origem', origem);
+      return (
+        await api.post<RelatorioImportacao>(`/revisoes/${revisaoId}/etapas/${etapa.id}/importar`, fd, {
+          timeout: 120_000,
+        })
+      ).data;
     },
     onSuccess: async (r) => {
       setRelatorio(r);
@@ -139,9 +149,10 @@ export function ImportarCsvEtapa({
         <code>decisao</code> (SELECIONADO/EXCLUIDO), <code>motivo</code> (CRITERIO, DUPLICADO, SEM_ACESSO, OUTRO),{' '}
         <code>criterio</code> (nome do critério de exclusão) e <code>observacao</code>. Também aceita o layout da
         planilha RIL: <code>Situação</code> (Selecionado/Excluído), <code>Base</code>, <code>Temas</code>,{' '}
-        <code>Idioma</code>, <code>Citações</code>, <code>Ref-NBR</code> e <code>Ref-APA</code>. Separador vírgula ou
-        ponto e vírgula. Documentos já existentes são reconhecidos pelo DOI (também lido dentro do periódico ou do
-        link) ou pelo título.
+        <code>Idioma</code>, <code>Citações</code>, <code>Ref-NBR</code> e <code>Ref-APA</code>. A coluna{' '}
+        <code>Origem</code> (Busca, Revisão anterior ou Integrado) marca a origem de cada linha. Separador vírgula ou
+        ponto e vírgula. Documentos já existentes são reconhecidos pelo DOI (também lido dentro do periódico ou do link)
+        ou pelo título.
       </p>
       <p className="small text-secondary">{textoDaEtapa(etapa)}</p>
       <button type="button" className="btn btn-link btn-sm p-0 mb-3" onClick={baixarModeloCsv}>
@@ -162,6 +173,31 @@ export function ImportarCsvEtapa({
           onChange={(e) => trocar(e.target.files?.[0] ?? null)}
         />
       </div>
+      <div className="mb-2">
+        <label htmlFor="csv-origem" className="form-label">
+          Origem dos documentos
+        </label>
+        <select
+          id="csv-origem"
+          className="form-select"
+          value={origem}
+          disabled={!!gravado}
+          onChange={(e) => {
+            setOrigem(e.target.value as typeof origem);
+            setRelatorio(null);
+          }}
+        >
+          <option value="">Busca em bases de dados — passam pela triagem (ou a coluna Origem do CSV)</option>
+          <option value="REVISAO_ANTERIOR">Revisão anterior — entram direto como incluídos</option>
+          <option value="INTEGRADO">Integrados de fonte secundária — entram direto como incluídos</option>
+        </select>
+        {origem && (
+          <div className="form-text">
+            Documentos de revisão anterior e integrados não passam pela triagem e contam como incluídos no painel
+            (RN13). Linhas com a coluna Origem preenchida seguem o valor da coluna.
+          </div>
+        )}
+      </div>
       {pendente && (
         <div className="form-check mb-2">
           <input
@@ -176,8 +212,8 @@ export function ImportarCsvEtapa({
             }}
           />
           <label className="form-check-label" htmlFor="csv-iniciar">
-            Iniciar esta etapa e concluir as anteriores ainda abertas (a etapa está pendente; use quando a triagem
-            foi feita fora do sistema)
+            Iniciar esta etapa e concluir as anteriores ainda abertas (a etapa está pendente; use quando a triagem foi
+            feita fora do sistema)
           </label>
         </div>
       )}
@@ -221,6 +257,12 @@ function ResumoImportacao({ r }: { r: RelatorioImportacao }) {
           Decisões: <span className="text-success">{r.decisoes.selecionados} selecionado(s)</span> ·{' '}
           <span className="text-danger">{r.decisoes.excluidos} excluído(s)</span> · {r.decisoes.semDecisao} sem decisão
         </li>
+        {r.outrasOrigens && (
+          <li>
+            {r.outrasOrigens.revisaoAnterior} de revisão anterior · {r.outrasOrigens.integrados} integrado(s) — entram
+            como incluídos, sem triagem
+          </li>
+        )}
         {!!r.temasCriados && <li>{r.temasCriados} tema(s) novo(s) no projeto (coluna Temas)</li>}
         {r.selecionadosEmEtapasAnteriores > 0 && (
           <li>{r.selecionadosEmEtapasAnteriores} marcação(ões) de selecionado em triagens anteriores</li>
