@@ -8,6 +8,7 @@ import type { Pendencia, Protocolo as TProtocolo, VersaoProtocolo } from '../../
 import { Carregando, ErroAlerta, IndicadorSalvo, Modal, Situacao } from '../../components/ui';
 import { ListaEditavel } from '../../components/ListaEditavel';
 import { BotaoTarefa } from '../../components/BotaoTarefa';
+import { BotaoImprimir } from '../../components/BotaoImprimir';
 import { useProjetoAtual } from './ProjetoLayout';
 import { corpoDoPasso, PASSOS, passosPreenchidos, rascunhoDe, type Rascunho } from './protocoloPassos';
 
@@ -645,20 +646,19 @@ function Conclusao({
       <div className="col-lg-5">
         <div className="card bg-body-tertiary border-0">
           <div className="card-body">
-            <h2 className="h6">Imprimir protocolo</h2>
+            <h2 className="h6">Imprimir</h2>
             <p className="small text-secondary">
-              PDF com o layout Konektron.{' '}
+              PDF com o layout Konektron: só o protocolo de pesquisa ou o projeto inteiro (protocolo, revisões e
+              análises).{' '}
               {protocolo.status === 'RASCUNHO' || protocolo.status === 'DEVOLVIDO'
                 ? 'Rascunho sai com marca d’água “RASCUNHO” (RN03).'
                 : ''}
             </p>
-            <button
+            <BotaoImprimir
+              projetoId={projeto.id}
+              aoImprimirProtocolo={() => setImprimir(true)}
               className={`btn ${protocolo.status === 'CONCLUIDO' || protocolo.status === 'APROVADO' ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={() => setImprimir(true)}
-            >
-              <i className="bi bi-printer me-1" aria-hidden="true" />
-              Imprimir protocolo
-            </button>
+            />
           </div>
         </div>
         <Versoes versoes={versoes.data ?? []} projetoId={projeto.id} carregando={versoes.isLoading} />
