@@ -12,6 +12,7 @@ export type RelatorioImportacao = {
   documentosDaRevisao: number;
   decisoes: { selecionados: number; excluidos: number; semDecisao: number };
   selecionadosEmEtapasAnteriores: number;
+  temasCriados?: number;
   avisos: { linha: number; mensagem: string }[];
   totalAvisos: number;
   simulado: boolean;
@@ -19,10 +20,13 @@ export type RelatorioImportacao = {
 
 const CATEGORIAS_IMPORTAVEIS = ['BUSCA', 'DEDUPLICACAO', 'TRIAGEM', 'INCLUSAO'];
 
-/** Etapas que recebem documentos por CSV (busca, deduplicação, triagem, inclusão ou livre com triagem) */
+/**
+ * Etapas que recebem documentos por CSV (busca, deduplicação, triagem, inclusão ou livre com triagem).
+ * Etapa pendente também aceita: a importação inicia a etapa e conclui as anteriores (triagem feita fora do app).
+ */
 export const aceitaImportacao = (e: EtapaRevisao) =>
   (CATEGORIAS_IMPORTAVEIS.includes(e.categoria) || (e.categoria === 'LIVRE' && (e.exigeTriagem || e.permiteExclusao))) &&
-  (e.status === 'EM_ANDAMENTO' || e.status === 'CONCLUIDA');
+  e.status !== 'DISPENSADA';
 
 const MODELO =
   'titulo;autores;ano;doi;periodico;base;decisao;motivo;criterio;observacao\n' +
@@ -63,11 +67,14 @@ export function ImportarCsvEtapa({
   const qc = useQueryClient();
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [substituir, setSubstituir] = useState(false);
+  const pendente = etapa.status === 'PENDENTE';
+  const [iniciar, setIniciar] = useState(true);
   const [relatorio, setRelatorio] = useState<RelatorioImportacao | null>(null);
   useEffect(() => {
     if (!aberto) {
       setArquivo(null);
       setSubstituir(false);
+      setIniciar(true);
       setRelatorio(null);
     }
   }, [aberto]);
@@ -78,6 +85,7 @@ export function ImportarCsvEtapa({
       fd.append('arquivo', arquivo!);
       fd.append('substituir', String(substituir));
       fd.append('simular', String(simular));
+      if (pendente) fd.append('iniciar', String(iniciar));
       return (await api.post<RelatorioImportacao>(`/revisoes/${revisaoId}/etapas/${etapa.id}/importar`, fd, { timeout: 120_000 })).data;
     },
     onSuccess: async (r) => {
@@ -107,7 +115,7 @@ export function ImportarCsvEtapa({
           <>
             <button
               className="btn btn-outline-primary"
-              disabled={!arquivo || enviar.isPending}
+              disabled={!arquivo || enviar.isPending || (pendente && !iniciar)}
               onClick={() => enviar.mutate(true)}
             >
               Simular
@@ -129,8 +137,11 @@ export function ImportarCsvEtapa({
         Uma linha por documento. Colunas reconhecidas: <code>titulo</code> (obrigatória), <code>autores</code>,{' '}
         <code>ano</code>, <code>doi</code>, <code>periodico</code>, <code>resumo</code>, <code>base</code>,{' '}
         <code>decisao</code> (SELECIONADO/EXCLUIDO), <code>motivo</code> (CRITERIO, DUPLICADO, SEM_ACESSO, OUTRO),{' '}
-        <code>criterio</code> (nome do critério de exclusão) e <code>observacao</code>. Separador vírgula ou ponto e
-        vírgula. Documentos já existentes são reconhecidos pelo DOI ou pelo título.
+        <code>criterio</code> (nome do critério de exclusão) e <code>observacao</code>. Também aceita o layout da
+        planilha RIL: <code>Situação</code> (Selecionado/Excluído), <code>Base</code>, <code>Temas</code>,{' '}
+        <code>Idioma</code>, <code>Citações</code>, <code>Ref-NBR</code> e <code>Ref-APA</code>. Separador vírgula ou
+        ponto e vírgula. Documentos já existentes são reconhecidos pelo DOI (também lido dentro do periódico ou do
+        link) ou pelo título.
       </p>
       <p className="small text-secondary">{textoDaEtapa(etapa)}</p>
       <button type="button" className="btn btn-link btn-sm p-0 mb-3" onClick={baixarModeloCsv}>
@@ -151,6 +162,25 @@ export function ImportarCsvEtapa({
           onChange={(e) => trocar(e.target.files?.[0] ?? null)}
         />
       </div>
+      {pendente && (
+        <div className="form-check mb-2">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id="csv-iniciar"
+            checked={iniciar}
+            disabled={!!gravado}
+            onChange={(e) => {
+              setIniciar(e.target.checked);
+              setRelatorio(null);
+            }}
+          />
+          <label className="form-check-label" htmlFor="csv-iniciar">
+            Iniciar esta etapa e concluir as anteriores ainda abertas (a etapa está pendente; use quando a triagem
+            foi feita fora do sistema)
+          </label>
+        </div>
+      )}
       {etapa.categoria !== 'BUSCA' && (
         <div className="form-check mb-3">
           <input
@@ -191,6 +221,7 @@ function ResumoImportacao({ r }: { r: RelatorioImportacao }) {
           Decisões: <span className="text-success">{r.decisoes.selecionados} selecionado(s)</span> ·{' '}
           <span className="text-danger">{r.decisoes.excluidos} excluído(s)</span> · {r.decisoes.semDecisao} sem decisão
         </li>
+        {!!r.temasCriados && <li>{r.temasCriados} tema(s) novo(s) no projeto (coluna Temas)</li>}
         {r.selecionadosEmEtapasAnteriores > 0 && (
           <li>{r.selecionadosEmEtapasAnteriores} marcação(ões) de selecionado em triagens anteriores</li>
         )}

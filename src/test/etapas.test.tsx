@@ -35,8 +35,8 @@ describe('aceitaImportacao', () => {
     expect(aceitaImportacao(etapa({ status: 'CONCLUIDA', categoria: 'INCLUSAO', exigeTriagem: false }))).toBe(true);
     expect(aceitaImportacao(etapa({ categoria: 'BUSCA', exigeTriagem: false }))).toBe(true);
   });
-  it('recusa etapa pendente, dispensada ou sem documentos', () => {
-    expect(aceitaImportacao(etapa({ status: 'PENDENTE' }))).toBe(false);
+  it('aceita etapa pendente (a importação inicia a etapa) e recusa dispensada ou sem documentos', () => {
+    expect(aceitaImportacao(etapa({ status: 'PENDENTE' }))).toBe(true);
     expect(aceitaImportacao(etapa({ status: 'DISPENSADA' }))).toBe(false);
     expect(aceitaImportacao(etapa({ categoria: 'ANALISE', exigeTriagem: false, permiteExclusao: false }))).toBe(false);
     expect(aceitaImportacao(etapa({ categoria: 'LIVRE', exigeTriagem: false, permiteExclusao: false }))).toBe(false);
@@ -55,11 +55,16 @@ describe('ImportarCsvEtapa', () => {
       avisos: [],
       totalAvisos: 0,
     };
-    post.mockResolvedValueOnce({ data: { ...rel, simulado: true } }).mockResolvedValueOnce({ data: { ...rel, simulado: false } });
+    post
+      .mockResolvedValueOnce({ data: { ...rel, simulado: true } })
+      .mockResolvedValueOnce({ data: { ...rel, simulado: false } });
     comQuery(<ImportarCsvEtapa revisaoId="r1" etapa={etapa()} aberto aoFechar={vi.fn()} />);
     const importar = screen.getByRole('button', { name: 'Importar' });
     expect(importar).toBeDisabled();
-    await userEvent.upload(screen.getByLabelText('Arquivo CSV'), new File(['titulo;decisao\nA;sim\n'], 't.csv', { type: 'text/csv' }));
+    await userEvent.upload(
+      screen.getByLabelText('Arquivo CSV'),
+      new File(['titulo;decisao\nA;sim\n'], 't.csv', { type: 'text/csv' }),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Simular' }));
     expect(await screen.findByText(/Simulação \(nada foi gravado ainda\)/)).toBeInTheDocument();
     expect((post.mock.calls[0][1] as FormData).get('simular')).toBe('true');
@@ -67,6 +72,45 @@ describe('ImportarCsvEtapa', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Importar' }));
     expect(await screen.findByText(/Importação concluída/)).toBeInTheDocument();
     expect((post.mock.calls[1][1] as FormData).get('simular')).toBe('false');
+  });
+});
+
+describe('ImportarCsvEtapa em etapa pendente', () => {
+  it('envia iniciar=true e bloqueia a simulação se a opção for desmarcada', async () => {
+    post.mockResolvedValueOnce({
+      data: {
+        linhas: 1,
+        documentosCriados: 1,
+        documentosDoProjeto: 0,
+        documentosDaRevisao: 0,
+        decisoes: { selecionados: 1, excluidos: 0, semDecisao: 0 },
+        selecionadosEmEtapasAnteriores: 0,
+        temasCriados: 2,
+        avisos: [],
+        totalAvisos: 0,
+        simulado: true,
+      },
+    });
+    comQuery(
+      <ImportarCsvEtapa
+        revisaoId="r1"
+        etapa={etapa({ status: 'PENDENTE', iniciadaEm: null })}
+        aberto
+        aoFechar={vi.fn()}
+      />,
+    );
+    await userEvent.upload(
+      screen.getByLabelText('Arquivo CSV'),
+      new File(['Título,Situação\nA,Selecionado\n'], 'RIL-F1.csv', { type: 'text/csv' }),
+    );
+    const iniciar = screen.getByLabelText(/Iniciar esta etapa/);
+    expect(iniciar).toBeChecked();
+    await userEvent.click(iniciar);
+    expect(screen.getByRole('button', { name: 'Simular' })).toBeDisabled();
+    await userEvent.click(iniciar);
+    await userEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    expect(await screen.findByText(/2 tema\(s\) novo\(s\)/)).toBeInTheDocument();
+    expect((post.mock.calls.at(-1)![1] as FormData).get('iniciar')).toBe('true');
   });
 });
 
@@ -87,7 +131,9 @@ describe('EditarEtapa', () => {
     await userEvent.type(nome, 'Triagem por título');
     await userEvent.click(screen.getByLabelText(/Exige triagem/));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(patch).toHaveBeenCalledWith('/revisoes/r1/etapas/e1', { nome: 'Triagem por título', exigeTriagem: false }));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/revisoes/r1/etapas/e1', { nome: 'Triagem por título', exigeTriagem: false }),
+    );
     await waitFor(() => expect(aoFechar).toHaveBeenCalled());
   });
 });
