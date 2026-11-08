@@ -44,7 +44,8 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
   const docs = useMemo(() => q.data?.documentos ?? [], [q.data]);
   const atual = docs.find((d) => d.revisaoDocumentoId === atualId) ?? null;
   const so_exclusao = !etapa.exigeTriagem && etapa.permiteExclusao; // ex.: remoção de duplicados
-  const podeDecidir = edita && etapa.status === 'EM_ANDAMENTO';
+  // decisões podem ser corrigidas também depois de a etapa ser concluída
+  const podeDecidir = edita && (etapa.status === 'EM_ANDAMENTO' || etapa.status === 'CONCLUIDA');
   const criteriosExclusao = (protocolo.data?.criterios ?? []).filter((c) => c.tipo === 'EXCLUSAO');
   const podeDesempatar =
     revisao.doisRevisores && (papel === 'ORIENTADOR' || papel === 'RESPONSAVEL' || papel === 'ADMIN');

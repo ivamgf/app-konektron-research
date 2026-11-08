@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api, get } from '../../lib/api';
 import { rotulo } from '../../lib/formato';
 import { Carregando, ErroAlerta } from '../../components/ui';
+import type { Revisao } from '../../lib/tipos';
+import { DadosDaRevisao } from './DadosDaRevisao';
 
 type LinhaEtapa = {
   revisaoEtapaId: string;
@@ -54,7 +56,8 @@ export function tabelaBaseFase(linhas: LinhaEtapa[]) {
 }
 
 /** RF32/RN13 + RF33 (fluxograma exportável em SVG/PNG) */
-export function Painel({ revisaoId }: { revisaoId: string }) {
+export function Painel({ revisao }: { revisao: Revisao }) {
+  const revisaoId = revisao.id;
   const q = useQuery({
     queryKey: ['revisao', revisaoId, 'painel'],
     queryFn: () => get<PainelDados>(`/revisoes/${revisaoId}/painel`),
@@ -73,6 +76,7 @@ export function Painel({ revisaoId }: { revisaoId: string }) {
 
   return (
     <div style={{ fontFamily: "'Inter', var(--bs-body-font-family)" }}>
+      <DadosDaRevisao revisao={revisao} />
       <div className="row g-3 mb-4">
         {cartoes.map(([texto, valor, icone]) => (
           <div className="col-6 col-md" key={texto}>

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { useTarefa } from './BotaoTarefa';
+import { LinksDoArquivo, useTarefa } from './BotaoTarefa';
 
 /**
  * Um botão "Imprimir" com duas opções:
@@ -91,12 +91,7 @@ export function BotaoImprimir({
           </ul>
         )}
       </div>
-      {projeto.url && (
-        <a className="btn btn-success" href={projeto.url} target="_blank" rel="noreferrer">
-          <i className="bi bi-download me-1" aria-hidden="true" />
-          Abrir PDF do projeto
-        </a>
-      )}
+      {projeto.url && <LinksDoArquivo url={projeto.url} pdf texto="Abrir PDF do projeto" />}
       {projeto.erro && (
         <span className="text-danger small" role="alert">
           {projeto.erro}

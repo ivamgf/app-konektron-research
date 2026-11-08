@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { get, mensagemDeErro, post } from '../lib/api';
 import type { Tarefa } from '../lib/tipos';
+import { ehPdf, imprimirPdf } from '../lib/pdf';
 
 /**
  * PDFs, importações e exportações rodam no worker: a API responde 202 com `tarefaId`
@@ -45,7 +46,8 @@ export function useTarefa(intervaloMs = 2000) {
   };
 
   const andamento = !!tarefaId && !erro && (!tarefa || tarefa.status === 'PENDENTE' || tarefa.status === 'PROCESSANDO');
-  return { iniciar, tarefa, erro, andamento, url: tarefa?.status === 'CONCLUIDA' ? tarefa.resultado?.url : undefined };
+  const url = tarefa?.status === 'CONCLUIDA' ? tarefa.resultado?.url : undefined;
+  return { iniciar, tarefa, erro, andamento, url, pdf: !!url && ehPdf(tarefa?.resultado?.arquivo) };
 }
 
 /** Botão que dispara a tarefa e, ao concluir, mostra o link de download */
@@ -69,17 +71,30 @@ export function BotaoTarefa({
         {t.andamento ? <span className="spinner-border spinner-border-sm me-1" aria-hidden="true" /> : null}
         {t.andamento ? 'Gerando…' : children}
       </button>
-      {t.url && (
-        <a className="btn btn-success" href={t.url} target="_blank" rel="noreferrer">
-          <i className="bi bi-download me-1" aria-hidden="true" />
-          {textoPronto}
-        </a>
-      )}
+      {t.url && <LinksDoArquivo url={t.url} pdf={t.pdf} texto={textoPronto} />}
       {t.erro && (
         <span className="text-danger small" role="alert">
           {t.erro}
         </span>
       )}
     </span>
+  );
+}
+
+/** PDF abre numa aba nova (inline) e tem o atalho Imprimir; outros arquivos são baixados */
+export function LinksDoArquivo({ url, pdf, texto }: { url: string; pdf: boolean; texto: string }) {
+  return (
+    <>
+      <a className="btn btn-success" href={url} target="_blank" rel="noreferrer">
+        <i className={`bi ${pdf ? 'bi-box-arrow-up-right' : 'bi-download'} me-1`} aria-hidden="true" />
+        {texto}
+      </a>
+      {pdf && (
+        <button type="button" className="btn btn-outline-success" onClick={() => imprimirPdf(url)}>
+          <i className="bi bi-printer me-1" aria-hidden="true" />
+          Imprimir
+        </button>
+      )}
+    </>
   );
 }
