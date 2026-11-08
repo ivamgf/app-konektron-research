@@ -125,6 +125,14 @@ export function VisaoGeral() {
               <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
               Exportar XLSX
             </BotaoTarefa>
+            <p className="small text-secondary mb-2 mt-2">
+              PDF do projeto inteiro: protocolo de pesquisa, relatórios das revisões e análises. Para imprimir só o
+              protocolo, use a página Protocolo.
+            </p>
+            <BotaoTarefa url={`/projetos/${p.id}/exportar`} corpo={{ formato: 'pdf' }} textoPronto="Abrir PDF">
+              <i className="bi bi-file-earmark-pdf me-1" aria-hidden="true" />
+              Imprimir projeto inteiro (PDF)
+            </BotaoTarefa>
           </div>
         </div>
 
