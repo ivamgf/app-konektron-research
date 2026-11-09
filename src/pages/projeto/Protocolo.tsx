@@ -614,6 +614,7 @@ const SECOES = [
   { id: 'criterios', texto: 'Critérios' },
   { id: 'revisoes', texto: 'Revisões previstas' },
   { id: 'historico', texto: 'Histórico e aprovação' },
+  { id: 'referencias', texto: 'Referências (ABNT e APA)' },
 ];
 
 function Conclusao({
