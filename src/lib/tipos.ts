@@ -83,6 +83,13 @@ export type Protocolo = {
   hipotese: string | null;
   objetivoGeral: string | null;
   justificativa: string | null;
+  metodologiaTipo?: string | null;
+  metodologiaOutro?: string | null;
+  metodologia?: string | null;
+  riscos?: string | null;
+  beneficios?: string | null;
+  resultadosEsperados?: string | null;
+  tcleArquivoId?: string | null;
   parecer: string | null;
   aprovadoEm: string | null;
   concluidoEm: string | null;
@@ -180,6 +187,9 @@ export type Revisao = {
   diretrizVersao?: string | null;
   diretrizUrl?: string | null;
   doisRevisores: boolean;
+  /** onde a revisão foi registrada (PROSPERO, OSF...) */
+  registroUrl?: string | null;
+  registroIdentificador?: string | null;
   status: 'PLANEJADA' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'CANCELADA';
   etapaAtualId: string | null;
   etapaAtualNome?: string | null;

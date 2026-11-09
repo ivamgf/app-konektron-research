@@ -10,6 +10,7 @@ import { data, rotulo } from '../lib/formato';
 import type { Projeto } from '../lib/tipos';
 import { Cabecalho, Carregando, ErroAlerta, Modal, Situacao, Vazio } from '../components/ui';
 import { ErroCampo } from './auth/CartaoAuth';
+import { TOTAL_PASSOS } from './projeto/protocoloPassos';
 
 // RF05: título, área, instituição, programa, datas
 export const projetoSchema = z
@@ -123,7 +124,7 @@ export function FormProjeto({
   );
 }
 
-const PASSOS = 8;
+const PASSOS = TOTAL_PASSOS;
 
 /** Painel de projetos (ERS 8.4): cards com status, progresso do protocolo e revisões */
 export function Projetos() {

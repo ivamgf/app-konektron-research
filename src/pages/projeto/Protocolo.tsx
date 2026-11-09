@@ -10,9 +10,18 @@ import { ListaEditavel } from '../../components/ListaEditavel';
 import { BotaoTarefa } from '../../components/BotaoTarefa';
 import { BotaoImprimir } from '../../components/BotaoImprimir';
 import { useProjetoAtual } from './ProjetoLayout';
-import { corpoDoPasso, PASSOS, passosPreenchidos, rascunhoDe, type Rascunho } from './protocoloPassos';
+import {
+  corpoDoPasso,
+  METODOLOGIAS,
+  PASSOS,
+  passosPreenchidos,
+  rascunhoDe,
+  TOTAL_PASSOS,
+  type Rascunho,
+} from './protocoloPassos';
+import { Tcle } from './Tcle';
 
-const CONCLUIR = 9; // passo extra: revisão, conclusão e impressão
+const CONCLUIR = TOTAL_PASSOS + 1; // passo extra: revisão, conclusão e impressão
 
 export default function Protocolo() {
   const { projeto } = useProjetoAtual();
@@ -25,7 +34,7 @@ export default function Protocolo() {
 function Assistente({ protocolo }: { protocolo: TProtocolo }) {
   const { projeto, edita } = useProjetoAtual();
   const qc = useQueryClient();
-  const [passo, setPasso] = useState(() => Math.min(8, Math.max(1, protocolo.passoAtual || 1)));
+  const [passo, setPasso] = useState(() => Math.min(TOTAL_PASSOS, Math.max(1, protocolo.passoAtual || 1)));
   const [r, setR] = useState<Rascunho>(() => rascunhoDe(protocolo));
   const [sujo, setSujo] = useState(false);
   const [estado, setEstado] = useState<'ocioso' | 'salvando' | 'salvo' | 'erro'>('ocioso');
@@ -84,7 +93,7 @@ function Assistente({ protocolo }: { protocolo: TProtocolo }) {
 
   const irPara = async (destino: number) => {
     if (sujo && !somenteLeitura && passo !== CONCLUIR) {
-      const ok = await salvar(passo, Math.min(8, destino), r);
+      const ok = await salvar(passo, Math.min(TOTAL_PASSOS, destino), r);
       if (!ok) return;
     }
     setPasso(destino);
@@ -159,7 +168,7 @@ function Assistente({ protocolo }: { protocolo: TProtocolo }) {
           ) : (
             <>
               <h2 className="h5 mb-3">
-                Passo {passo} de 8 · {PASSOS[passo - 1].titulo}
+                Passo {passo} de {TOTAL_PASSOS} · {PASSOS[passo - 1].titulo}
               </h2>
               <fieldset disabled={somenteLeitura}>
                 <ConteudoDoPasso
@@ -190,7 +199,7 @@ function Assistente({ protocolo }: { protocolo: TProtocolo }) {
                 </button>
               )}
               <button className="btn btn-primary" onClick={() => irPara(passo + 1)}>
-                {passo === 8 ? 'Revisar e concluir' : 'Avançar'}
+                {passo === TOTAL_PASSOS ? 'Revisar e concluir' : 'Avançar'}
                 <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
               </button>
             </div>
@@ -517,6 +526,79 @@ function ConteudoDoPasso({
               </div>
             )}
           />
+        </>
+      );
+    case 9:
+      return (
+        <>
+          <div className="mb-3">
+            <label htmlFor="metodologia-tipo" className="form-label fw-medium">
+              Tipo de pesquisa / metodologia
+            </label>
+            <select
+              id="metodologia-tipo"
+              className="form-select"
+              value={r.metodologiaTipo}
+              onChange={(e) => alterar({ metodologiaTipo: e.target.value })}
+            >
+              <option value="">Escolha…</option>
+              {METODOLOGIAS.map(([v, t]) => (
+                <option key={v} value={v}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          {r.metodologiaTipo === 'OUTRA' && (
+            <div className="mb-3">
+              <label htmlFor="metodologia-outro" className="form-label fw-medium">
+                Qual metodologia? *
+              </label>
+              <input
+                id="metodologia-outro"
+                className="form-control"
+                maxLength={200}
+                value={r.metodologiaOutro}
+                onChange={(e) => alterar({ metodologiaOutro: e.target.value })}
+              />
+            </div>
+          )}
+          <Campo
+            id="metodologia"
+            rotulo="Descrição da metodologia"
+            valor={r.metodologia}
+            aoMudar={(v) => alterar({ metodologia: v })}
+            linhas={8}
+            ajuda="Abordagem, etapas, participantes, instrumentos de coleta (questionário, entrevista, testes) e forma de análise dos dados."
+          />
+        </>
+      );
+    case 10:
+      return (
+        <>
+          <Campo
+            id="resultados"
+            rotulo="Principais resultados esperados *"
+            valor={r.resultadosEsperados}
+            aoMudar={(v) => alterar({ resultadosEsperados: v })}
+            linhas={5}
+          />
+          <Campo
+            id="riscos"
+            rotulo="Riscos (opcional)"
+            valor={r.riscos}
+            aoMudar={(v) => alterar({ riscos: v })}
+            linhas={4}
+            ajuda="Riscos e desconfortos previsíveis para os participantes e as medidas para minimizá-los (pesquisas com seres humanos)."
+          />
+          <Campo
+            id="beneficios"
+            rotulo="Benefícios da pesquisa (opcional)"
+            valor={r.beneficios}
+            aoMudar={(v) => alterar({ beneficios: v })}
+            linhas={4}
+          />
+          <Tcle projetoId={projetoId} somenteLeitura={somenteLeitura} />
         </>
       );
     default:

@@ -9,6 +9,7 @@ import { BotaoConfirmar, ErroAlerta, Modal, Situacao } from '../../components/ui
 import { BotaoTarefa } from '../../components/BotaoTarefa';
 import { FormProjeto, paraApi } from '../Projetos';
 import { useProjetoAtual } from './ProjetoLayout';
+import { TOTAL_PASSOS } from './protocoloPassos';
 
 type ResultadoBusca = {
   documentos: { id: string; titulo: string; autores: string | null; ano: number | null }[];
@@ -83,7 +84,7 @@ export function VisaoGeral() {
                   <Situacao valor={p.protocolo?.status} />
                   <span className="small text-secondary">
                     {p.protocolo?.versaoAtual ? `versão ${p.protocolo.versaoAtual}` : 'sem versão concluída'} · passo{' '}
-                    {p.protocolo?.passoAtual ?? 1} de 8
+                    {p.protocolo?.passoAtual ?? 1} de {TOTAL_PASSOS}
                   </span>
                 </div>
               </div>

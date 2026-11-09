@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { get, patch } from '../../lib/api';
+import { api, get, patch } from '../../lib/api';
 import { rotulo } from '../../lib/formato';
-import type { DocumentoDaRevisao, Tema } from '../../lib/tipos';
-import { Carregando, ErroAlerta, Situacao, Vazio } from '../../components/ui';
+import type { Documento, DocumentoDaRevisao, Tema } from '../../lib/tipos';
+import { BotaoConfirmar, Carregando, ErroAlerta, Modal, Situacao, Vazio } from '../../components/ui';
 import { useProjetoAtual } from '../projeto/ProjetoLayout';
+import { FormDocumento } from '../projeto/Documentos';
 
 const ORIGENS = [
   ['BUSCA', 'Busca'],
@@ -16,7 +17,16 @@ const ORIGENS = [
 export const chaveDocsRevisao = (revisaoId: string) => ['revisao', revisaoId, 'documentos'] as const;
 
 /** Documentos da revisão por situação e origem; a origem e a categoria podem ser ajustadas aqui */
-export function DocumentosDaRevisao({ revisaoId, situacaoFixa }: { revisaoId: string; situacaoFixa?: 'INCLUIDO' }) {
+export function DocumentosDaRevisao({
+  revisaoId,
+  situacaoFixa,
+  acoes = false,
+}: {
+  revisaoId: string;
+  situacaoFixa?: 'INCLUIDO';
+  /** botões Editar e Excluir por documento (etapa de inclusão de revisão anterior e integrados) */
+  acoes?: boolean;
+}) {
   const { projeto, edita } = useProjetoAtual();
   const qc = useQueryClient();
   const [situacao, setSituacao] = useState<string>(situacaoFixa ?? '');
@@ -38,6 +48,23 @@ export function DocumentosDaRevisao({ revisaoId, situacaoFixa }: { revisaoId: st
       patch(`/revisoes/${revisaoId}/documentos/${rdId}`, { categoriaId }),
     onSuccess: () => qc.invalidateQueries({ queryKey: chaveDocsRevisao(revisaoId) }),
   });
+  const [editando, setEditando] = useState<Documento | null>(null);
+  const [erroAcao, setErroAcao] = useState<unknown>(null);
+  const atualizar = () => {
+    qc.invalidateQueries({ queryKey: ['revisao', revisaoId] });
+    qc.invalidateQueries({ queryKey: ['projeto', projeto.id, 'documentos'] });
+  };
+  const editar = async (d: DocumentoDaRevisao) => {
+    try {
+      setErroAcao(null);
+      setEditando(await get<Documento>(`/documentos/${d.documentoId}`));
+    } catch (e) {
+      setErroAcao(e);
+    }
+  };
+  // tira da revisão; o documento também sai do projeto se não estiver em outra revisão nem em análises
+  const excluir = (d: DocumentoDaRevisao) =>
+    api.delete(`/revisoes/${revisaoId}/documentos/${d.id}`, { params: { apagarDocumento: true } }).then(atualizar);
   // revisão anterior e integrados entram como incluídos; voltar para busca devolve à triagem
   const mudarOrigem = useMutation({
     mutationFn: ({ rdId, origem }: { rdId: string; origem: string }) =>
@@ -79,7 +106,7 @@ export function DocumentosDaRevisao({ revisaoId, situacaoFixa }: { revisaoId: st
         {q.data && <span className="small text-secondary align-self-center">{q.data.length} documento(s)</span>}
       </div>
       {q.isLoading && <Carregando />}
-      <ErroAlerta erro={q.error ?? mudarCategoria.error ?? mudarOrigem.error} />
+      <ErroAlerta erro={q.error ?? mudarCategoria.error ?? mudarOrigem.error ?? erroAcao} />
       {q.data?.length === 0 && <Vazio icone="bi-files">Nenhum documento.</Vazio>}
       {!!q.data?.length && (
         <div className="table-responsive">
@@ -91,6 +118,7 @@ export function DocumentosDaRevisao({ revisaoId, situacaoFixa }: { revisaoId: st
                 <th>Base / origem</th>
                 <th>Situação</th>
                 <th>Categoria</th>
+                {acoes && edita && <th className="text-end">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -143,12 +171,61 @@ export function DocumentosDaRevisao({ revisaoId, situacaoFixa }: { revisaoId: st
                       (d.categoriaNome ?? '—')
                     )}
                   </td>
+                  {acoes && edita && (
+                    <td className="text-end text-nowrap">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm me-1"
+                        title="Editar documento"
+                        aria-label={`Editar ${d.titulo}`}
+                        onClick={() => editar(d)}
+                      >
+                        <i className="bi bi-pencil" aria-hidden="true" />
+                      </button>
+                      {d.origem !== 'BUSCA' ? (
+                        <BotaoConfirmar
+                          titulo={`Excluir ${d.titulo}`}
+                          pergunta={
+                            <>
+                              Excluir <strong>{d.titulo}</strong> desta revisão? Se o documento não estiver em outra
+                              revisão nem em análises, ele também é apagado do projeto.
+                            </>
+                          }
+                          aoConfirmar={() => excluir(d)}
+                        >
+                          <i className="bi bi-trash" aria-hidden="true" />
+                        </BotaoConfirmar>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          disabled
+                          title="Documentos de busca saem da revisão pela triagem (exclusão com motivo)"
+                          aria-label={`Excluir ${d.titulo} (indisponível: documento de busca)`}
+                        >
+                          <i className="bi bi-trash" aria-hidden="true" />
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      <Modal titulo="Editar documento" aberto={!!editando} aoFechar={() => setEditando(null)} tamanho="lg">
+        {editando && (
+          <FormDocumento
+            inicial={editando}
+            projetoId={projeto.id}
+            aoSalvar={() => {
+              setEditando(null);
+              atualizar();
+            }}
+          />
+        )}
+      </Modal>
     </>
   );
 }
