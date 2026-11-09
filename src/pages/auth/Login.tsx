@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { useAuth } from '../../auth/AuthProvider';
 import { lerErro } from '../../lib/api';
 import { ErroAlerta } from '../../components/ui';
-import { CartaoAuth, ErroCampo } from './CartaoAuth';
+import { ariaErro, CartaoAuth, ErroCampo } from './CartaoAuth';
 
 const schema = z.object({
   email: z.email('Informe um e-mail válido'),
@@ -52,9 +52,10 @@ export function Login() {
             type="email"
             autoComplete="email"
             className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+            {...ariaErro('email', errors.email)}
             {...register('email')}
           />
-          <ErroCampo mensagem={errors.email?.message} />
+          <ErroCampo id="email" mensagem={errors.email?.message} />
         </div>
         <div className="mb-3">
           <label htmlFor="senha" className="form-label">
@@ -65,9 +66,10 @@ export function Login() {
             type="password"
             autoComplete="current-password"
             className={`form-control ${errors.senha ? 'is-invalid' : ''}`}
+            {...ariaErro('senha', errors.senha)}
             {...register('senha')}
           />
-          <ErroCampo mensagem={errors.senha?.message} />
+          <ErroCampo id="senha" mensagem={errors.senha?.message} />
         </div>
         <button type="submit" className="btn btn-primary w-100" disabled={isSubmitting}>
           {isSubmitting && <span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />}

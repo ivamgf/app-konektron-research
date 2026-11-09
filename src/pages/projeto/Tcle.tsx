@@ -111,7 +111,7 @@ export function Tcle({ projetoId, somenteLeitura }: { projetoId: string; somente
             )}
           </span>
           <a className="btn btn-link btn-sm" href={tcle.url} target="_blank" rel="noreferrer">
-            Abrir
+            Abrir<span className="visually-hidden"> o TCLE (abre em nova aba)</span>
           </a>
           {!somenteLeitura && (
             <BotaoConfirmar titulo="Remover TCLE" pergunta="Remover o TCLE anexado ao protocolo?" aoConfirmar={remover}>

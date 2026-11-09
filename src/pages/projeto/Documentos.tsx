@@ -112,7 +112,11 @@ export default function Documentos() {
                     {d.periodico ?? '—'}
                   </td>
                   <td className="text-center">
-                    {d.arquivoId ? <i className="bi bi-file-earmark-pdf text-danger" aria-label="Com PDF" /> : '—'}
+                    {d.arquivoId ? (
+                      <i className="bi bi-file-earmark-pdf text-danger" role="img" aria-label="Com PDF" />
+                    ) : (
+                      '—'
+                    )}
                   </td>
                 </tr>
               ))}
@@ -206,6 +210,7 @@ function DetalheDocumento({
                 {' · '}
                 <a href={`https://doi.org/${doc.doi}`} target="_blank" rel="noreferrer" className="k-mono">
                   {doc.doi}
+                  <span className="visually-hidden"> (abre em nova aba)</span>
                 </a>
               </>
             )}

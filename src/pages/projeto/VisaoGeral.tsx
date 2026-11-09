@@ -5,7 +5,7 @@ import { del, get, patch, post } from '../../lib/api';
 import { chaves, useRevisoes } from '../../lib/consultas';
 import { data } from '../../lib/formato';
 import type { Tema } from '../../lib/tipos';
-import { BotaoConfirmar, ErroAlerta, Modal, Situacao } from '../../components/ui';
+import { Abas, BotaoConfirmar, ErroAlerta, Modal, Situacao } from '../../components/ui';
 import { BotaoTarefa } from '../../components/BotaoTarefa';
 import { FormProjeto, paraApi } from '../Projetos';
 import { useProjetoAtual } from './ProjetoLayout';
@@ -280,58 +280,61 @@ function Temas({ projetoId, edita }: { projetoId: string; edita: boolean }) {
   return (
     <div className="card mb-4">
       <div className="card-body">
-        <ul className="nav nav-pills nav-sm mb-3">
-          {(['temas', 'categorias'] as const).map((a) => (
-            <li className="nav-item" key={a}>
-              <button className={`nav-link py-1 ${aba === a ? 'active' : ''}`} onClick={() => setAba(a)}>
-                {a === 'temas' ? 'Temas' : 'Categorias'}
+        <Abas
+          abas={[
+            { id: 'temas', texto: 'Temas' },
+            { id: 'categorias', texto: 'Categorias' },
+          ]}
+          atual={aba}
+          aoMudar={setAba}
+          rotulo="Temas e categorias do projeto"
+          className="nav nav-pills nav-sm mb-3"
+          classeBotao="py-1"
+        >
+          <ErroAlerta erro={lista.error ?? criar.error} />
+          <div className="d-flex flex-wrap gap-1 mb-3">
+            {lista.data?.map((t) => (
+              <span key={t.id} className="badge text-bg-light border d-inline-flex align-items-center gap-1">
+                {t.nome}
+                {edita && (
+                  <BotaoConfirmar
+                    className="btn btn-link btn-sm p-0 text-danger"
+                    titulo={`Excluir ${t.nome}`}
+                    pergunta={`Excluir "${t.nome}"?`}
+                    aoConfirmar={async () => {
+                      await del(`/projetos/${projetoId}/${aba}/${t.id}`);
+                      await qc.invalidateQueries({ queryKey: chave });
+                    }}
+                  >
+                    <i className="bi bi-x" aria-hidden="true" />
+                  </BotaoConfirmar>
+                )}
+              </span>
+            ))}
+            {lista.data?.length === 0 && <span className="small text-secondary">Nenhum cadastrado.</span>}
+          </div>
+          {edita && (
+            <form
+              className="input-group input-group-sm"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (nome.trim()) criar.mutate();
+              }}
+            >
+              <input
+                className="form-control"
+                placeholder={`Novo ${aba === 'temas' ? 'tema' : 'categoria'}`}
+                aria-label={aba === 'temas' ? 'Nome do novo tema' : 'Nome da nova categoria'}
+                value={nome}
+                maxLength={120}
+                onChange={(e) => setNome(e.target.value)}
+              />
+              <button className="btn btn-outline-primary" disabled={!nome.trim() || criar.isPending}>
+                Adicionar
               </button>
-            </li>
-          ))}
-        </ul>
-        <ErroAlerta erro={lista.error ?? criar.error} />
-        <div className="d-flex flex-wrap gap-1 mb-3">
-          {lista.data?.map((t) => (
-            <span key={t.id} className="badge text-bg-light border d-inline-flex align-items-center gap-1">
-              {t.nome}
-              {edita && (
-                <BotaoConfirmar
-                  className="btn btn-link btn-sm p-0 text-danger"
-                  titulo={`Excluir ${t.nome}`}
-                  pergunta={`Excluir "${t.nome}"?`}
-                  aoConfirmar={async () => {
-                    await del(`/projetos/${projetoId}/${aba}/${t.id}`);
-                    await qc.invalidateQueries({ queryKey: chave });
-                  }}
-                >
-                  <i className="bi bi-x" aria-hidden="true" />
-                </BotaoConfirmar>
-              )}
-            </span>
-          ))}
-          {lista.data?.length === 0 && <span className="small text-secondary">Nenhum cadastrado.</span>}
-        </div>
-        {edita && (
-          <form
-            className="input-group input-group-sm"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (nome.trim()) criar.mutate();
-            }}
-          >
-            <input
-              className="form-control"
-              placeholder={`Novo ${aba === 'temas' ? 'tema' : 'categoria'}`}
-              aria-label="Nome"
-              value={nome}
-              maxLength={120}
-              onChange={(e) => setNome(e.target.value)}
-            />
-            <button className="btn btn-outline-primary" disabled={!nome.trim() || criar.isPending}>
-              Adicionar
-            </button>
-          </form>
-        )}
+            </form>
+          )}
+        </Abas>
       </div>
     </div>
   );

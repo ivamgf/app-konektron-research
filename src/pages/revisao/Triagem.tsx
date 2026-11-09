@@ -13,6 +13,8 @@ import {
   pendenteParaMim,
   proximoPendente,
   teclaDeAtalho,
+  atalhosLigados,
+  gravarAtalhos,
   validarExclusao,
   type Exclusao,
 } from './triagemLogica';
@@ -105,6 +107,7 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
   const protocolo = useProtocolo(projeto.id);
   const [filtro, setFiltro] = useState<string>(revisao.doisRevisores ? 'minhas-pendentes' : 'pendentes');
   const [visao, setVisao] = useState<'triagem' | 'conflitos'>('triagem');
+  const [atalhos, setAtalhos] = useState(atalhosLigados);
   const chave = ['etapa', etapa.id, 'documentos', filtro];
   const q = useQuery({ queryKey: chave, queryFn: () => get<Resposta>(`/etapas/${etapa.id}/documentos`, { filtro }) });
   const [atualId, setAtualId] = useState<string | null>(null);
@@ -212,7 +215,7 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
   const todosMarcados = docs.length > 0 && visiveisMarcados.length === docs.length;
 
   useEffect(() => {
-    if (visao !== 'triagem') return;
+    if (visao !== 'triagem' || !atalhos) return;
     const tecla = (ev: KeyboardEvent) => {
       const t = teclaDeAtalho(ev);
       if (!t) return;
@@ -227,7 +230,7 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
     };
     window.addEventListener('keydown', tecla);
     return () => window.removeEventListener('keydown', tecla);
-  }, [docs, atualId, selecionar, podeDecidir, atual, so_exclusao, visao]);
+  }, [docs, atualId, selecionar, podeDecidir, atual, so_exclusao, visao, atalhos]);
 
   const c = q.data?.contagens;
   return (
@@ -252,12 +255,16 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
         {podeDesempatar && (
           <div className="btn-group btn-group-sm">
             <button
+              type="button"
+              aria-pressed={visao === 'triagem'}
               className={`btn ${visao === 'triagem' ? 'btn-primary' : 'btn-outline-primary'}`}
               onClick={() => setVisao('triagem')}
             >
               Triagem
             </button>
             <button
+              type="button"
+              aria-pressed={visao === 'conflitos'}
               className={`btn ${visao === 'conflitos' ? 'btn-primary' : 'btn-outline-primary'}`}
               onClick={() => setVisao('conflitos')}
             >
@@ -480,6 +487,7 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                             rel="noreferrer"
                           >
                             {atual.doi}
+                            <span className="visually-hidden"> (abre em nova aba)</span>
                           </a>
                         )}
                         {atual.link && (
@@ -491,6 +499,7 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                           >
                             <i className="bi bi-box-arrow-up-right me-1" aria-hidden="true" />
                             Link
+                            <span className="visually-hidden"> (abre em nova aba)</span>
                           </a>
                         )}
                         {atual.arquivoId && (
@@ -559,7 +568,12 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                                 onClick={selecionar}
                               >
                                 <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
-                                Selecionar <kbd className="ms-1">S</kbd>
+                                Selecionar
+                                {atalhos && (
+                                  <kbd className="ms-1" aria-hidden="true">
+                                    S
+                                  </kbd>
+                                )}
                               </button>
                             )}
                             <button
@@ -568,9 +582,33 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                               onClick={() => setExcluindo({ ...SEM_EXCLUSAO, motivo: so_exclusao ? 'DUPLICADO' : '' })}
                             >
                               <i className="bi bi-x-circle-fill me-2" aria-hidden="true" />
-                              Excluir <kbd className="ms-1">E</kbd>
+                              Excluir
+                              {atalhos && (
+                                <kbd className="ms-1" aria-hidden="true">
+                                  E
+                                </kbd>
+                              )}
                             </button>
-                            <span className="small text-secondary ms-auto">↑/↓ navegam pela lista</span>
+                            <div className="form-check form-switch small ms-auto mb-0">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id="atalhos-triagem"
+                                checked={atalhos}
+                                aria-describedby="atalhos-triagem-ajuda"
+                                onChange={(e) => {
+                                  setAtalhos(e.target.checked);
+                                  gravarAtalhos(e.target.checked);
+                                }}
+                              />
+                              <label className="form-check-label" htmlFor="atalhos-triagem">
+                                Atalhos de teclado
+                              </label>
+                              <div id="atalhos-triagem-ajuda" className="text-secondary">
+                                S seleciona, E exclui, ↑/↓ (ou J/K) navegam pela lista
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

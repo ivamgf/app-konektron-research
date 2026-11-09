@@ -43,9 +43,31 @@ export function corpoDecisao(decisao: 'SELECIONADO' | 'EXCLUIDO', e?: Exclusao) 
 }
 
 /** Atalhos só valem fora de campos de texto */
+const CHAVE_ATALHOS = 'konektron.atalhosTriagem';
+
+/** WCAG 2.1.4: os atalhos de uma tecla só (S, E, J, K) podem ser desligados pelo usuário */
+export function atalhosLigados(): boolean {
+  try {
+    return localStorage.getItem(CHAVE_ATALHOS) !== 'off';
+  } catch {
+    return true;
+  }
+}
+export function gravarAtalhos(ligados: boolean) {
+  try {
+    localStorage.setItem(CHAVE_ATALHOS, ligados ? 'on' : 'off');
+  } catch {
+    // navegador sem localStorage: vale só nesta tela
+  }
+}
+
 export function teclaDeAtalho(ev: KeyboardEvent): 's' | 'e' | 'proximo' | 'anterior' | null {
   const alvo = ev.target as HTMLElement | null;
+  if (ev.defaultPrevented) return null;
   if (alvo && (alvo.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(alvo.tagName))) return null;
+  // não rouba as setas de componentes que as usam (abas, menus, listas) nem age com um modal aberto
+  if (alvo?.closest?.('[role="tablist"], [role="menu"], [role="listbox"], [role="radiogroup"], [role="dialog"]'))
+    return null;
   if (ev.ctrlKey || ev.metaKey || ev.altKey) return null;
   const k = ev.key.toLowerCase();
   if (k === 's') return 's';

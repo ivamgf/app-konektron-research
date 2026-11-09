@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { post } from '../../lib/api';
 import { ErroAlerta } from '../../components/ui';
-import { CartaoAuth, ErroCampo, REGRA_SENHA, senhaSchema } from './CartaoAuth';
+import { ariaErro, CartaoAuth, ErroCampo, REGRA_SENHA, senhaSchema } from './CartaoAuth';
 
 export function EsqueciSenha() {
   const [erro, setErro] = useState<unknown>(null);
@@ -45,9 +45,10 @@ export function EsqueciSenha() {
                 type="email"
                 autoComplete="email"
                 className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                {...ariaErro('email', errors.email)}
                 {...register('email')}
               />
-              <ErroCampo mensagem={errors.email?.message} />
+              <ErroCampo id="email" mensagem={errors.email?.message} />
             </div>
             <button className="btn btn-primary w-100" disabled={isSubmitting}>
               Enviar link
@@ -112,10 +113,13 @@ export function RedefinirSenha() {
                 type="password"
                 autoComplete="new-password"
                 className={`form-control ${errors.senha ? 'is-invalid' : ''}`}
+                {...ariaErro('senha', errors.senha, 'senha-regra')}
                 {...register('senha')}
               />
-              <div className="form-text">{REGRA_SENHA}</div>
-              <ErroCampo mensagem={errors.senha?.message} />
+              <div className="form-text" id="senha-regra">
+                {REGRA_SENHA}
+              </div>
+              <ErroCampo id="senha" mensagem={errors.senha?.message} />
             </div>
             <div className="mb-3">
               <label htmlFor="confirmacao" className="form-label">
@@ -126,9 +130,10 @@ export function RedefinirSenha() {
                 type="password"
                 autoComplete="new-password"
                 className={`form-control ${errors.confirmacao ? 'is-invalid' : ''}`}
+                {...ariaErro('confirmacao', errors.confirmacao)}
                 {...register('confirmacao')}
               />
-              <ErroCampo mensagem={errors.confirmacao?.message} />
+              <ErroCampo id="confirmacao" mensagem={errors.confirmacao?.message} />
             </div>
             <button className="btn btn-primary w-100" disabled={isSubmitting || !token}>
               Salvar nova senha

@@ -18,14 +18,14 @@ export function SeletorIdioma({ className = '' }: { className?: string }) {
         onChange={(e) => trocarIdioma(e.target.value as IdiomaSite)}
       >
         {IDIOMAS_SITE.map((i) => (
-          <option key={i.codigo} value={i.codigo}>
+          <option key={i.codigo} value={i.codigo} lang={i.lang}>
             {i.nome}
           </option>
         ))}
       </select>
       {atual !== 'pt' && (
-        <span className="small text-secondary d-none d-xl-inline" title="Machine translation by Google">
-          auto
+        <span className="small text-secondary d-none d-xl-inline" lang="en" title="Machine translation by Google">
+          auto<span className="visually-hidden"> (machine translation by Google)</span>
         </span>
       )}
     </div>
