@@ -6,6 +6,7 @@ export type Pendente = {
   url: string;
   corpo: {
     respostas?: { questaoAnaliseId: string; texto: string | null }[];
+    resumoAssunto?: string | null;
     consideracoes?: string | null;
     observacoes?: string | null;
   };

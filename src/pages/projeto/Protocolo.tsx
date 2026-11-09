@@ -21,6 +21,8 @@ import {
 } from './protocoloPassos';
 import { Tcle } from './Tcle';
 import { ResumosProtocolo } from './ResumosProtocolo';
+import { BotaoIA, BotaoIALista, pedidoDeLista } from '../../components/IA';
+import { CriarProtocoloComIA, contextoDoProtocolo } from './ProtocoloIA';
 
 const CONCLUIR = TOTAL_PASSOS + 1; // passo extra: revisão, conclusão e impressão
 
@@ -101,6 +103,29 @@ function Assistente({ protocolo }: { protocolo: TProtocolo }) {
     window.scrollTo({ top: 0 });
   };
 
+  /** Aplica o protocolo gerado pela IA ao rascunho e salva todos os passos */
+  const aplicarGerado = async (parcial: Partial<Rascunho>) => {
+    const novo = { ...r, ...parcial };
+    setR(novo);
+    versao.current++;
+    setEstado('salvando');
+    setErro(null);
+    try {
+      let atualizado: TProtocolo | null = null;
+      for (let p = 1; p <= TOTAL_PASSOS; p++) {
+        atualizado = await put<TProtocolo>(`/projetos/${projeto.id}/protocolo`, corpoDoPasso(p, novo, passo));
+      }
+      if (atualizado) qc.setQueryData(chaves.protocolo(projeto.id), atualizado);
+      qc.invalidateQueries({ queryKey: chaves.projeto(projeto.id) });
+      setSujo(false);
+      setEstado('salvo');
+    } catch (e) {
+      setSujo(true);
+      setEstado('erro');
+      setErro(mensagemDeErro(e));
+    }
+  };
+
   const preenchidos = passosPreenchidos(r);
   const pendencias = protocolo.pendencias ?? [];
 
@@ -108,6 +133,7 @@ function Assistente({ protocolo }: { protocolo: TProtocolo }) {
     <div>
       <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
         <Situacao valor={protocolo.status} />
+        {!somenteLeitura && <CriarProtocoloComIA r={r} projetoId={projeto.id} aoAplicar={aplicarGerado} />}
         <span className="small text-secondary">
           {protocolo.versaoAtual ? `Versão ${protocolo.versaoAtual}` : 'Ainda sem versão concluída'}
         </span>
@@ -211,6 +237,8 @@ function Assistente({ protocolo }: { protocolo: TProtocolo }) {
   );
 }
 
+type IACampo = { contexto: () => string; projetoId: string; somenteLeitura: boolean; orientacao?: string };
+
 function Campo({
   id,
   rotulo: texto,
@@ -218,6 +246,7 @@ function Campo({
   aoMudar,
   linhas = 3,
   ajuda,
+  ia,
 }: {
   id: string;
   rotulo: string;
@@ -225,12 +254,26 @@ function Campo({
   aoMudar: (v: string) => void;
   linhas?: number;
   ajuda?: string;
+  ia?: IACampo;
 }) {
   return (
     <div className="mb-3">
-      <label htmlFor={id} className="form-label fw-medium">
-        {texto}
-      </label>
+      <div className="d-flex align-items-end justify-content-between gap-2 mb-2">
+        <label htmlFor={id} className="form-label fw-medium mb-0">
+          {texto}
+        </label>
+        {ia && (
+          <BotaoIA
+            campo={texto.replace(/\s*[*(].*$/, '')}
+            orientacao={ia.orientacao ?? ajuda}
+            contexto={ia.contexto}
+            valor={valor}
+            aoAplicar={aoMudar}
+            projetoId={ia.projetoId}
+            desabilitado={ia.somenteLeitura}
+          />
+        )}
+      </div>
       <textarea
         id={id}
         className="form-control"
@@ -264,6 +307,8 @@ function ConteudoDoPasso({
   const bases = useBases();
   const idiomas = useIdiomas();
   const qc = useQueryClient();
+  const ctx = () => contextoDoProtocolo(r, idiomas.data);
+  const ia = (orientacao?: string): IACampo => ({ contexto: ctx, projetoId, somenteLeitura, orientacao });
   const converter = useMutation({
     mutationFn: () => post<unknown[]>(`/projetos/${projetoId}/questoes/de-outras-questoes`, {}),
     onSuccess: () => qc.invalidateQueries({ queryKey: chaves.protocolo(projetoId) }),
@@ -273,12 +318,19 @@ function ConteudoDoPasso({
     case 1:
       return (
         <>
-          <Campo id="tema" rotulo="Tema *" valor={r.tema} aoMudar={(v) => alterar({ tema: v })} />
+          <Campo
+            id="tema"
+            rotulo="Tema *"
+            valor={r.tema}
+            aoMudar={(v) => alterar({ tema: v })}
+            ia={ia('Uma frase curta que delimita o tema da pesquisa.')}
+          />
           <Campo
             id="questao"
             rotulo="Questão de pesquisa *"
             valor={r.questaoPesquisa}
             aoMudar={(v) => alterar({ questaoPesquisa: v })}
+            ia={ia('Uma única pergunta de pesquisa clara e respondível; se couber, no formato PICO/PICo/PCC.')}
           />
         </>
       );
@@ -296,6 +348,29 @@ function ConteudoDoPasso({
             somenteLeitura={somenteLeitura}
             textoAdicionar="Adicionar questão"
             max={50}
+            extra={
+              <BotaoIALista
+                rotulo="Sugerir questões com IA"
+                projetoId={projetoId}
+                desabilitado={somenteLeitura}
+                pedido={() =>
+                  pedidoDeLista({
+                    oQue: 'questões de pesquisa complementares (perguntas)',
+                    quantos: 'de 3 a 5',
+                    contexto: ctx(),
+                    existentes: r.outrasQuestoes.map((x) => x.texto).filter(Boolean),
+                  })
+                }
+                aoAplicar={(itens) =>
+                  alterar({
+                    outrasQuestoes: [
+                      ...r.outrasQuestoes.filter((x) => x.texto.trim()),
+                      ...itens.map((texto) => ({ texto })),
+                    ],
+                  })
+                }
+              />
+            }
             render={(it, set, i) => (
               <textarea
                 className="form-control"
@@ -335,6 +410,7 @@ function ConteudoDoPasso({
           valor={r.hipotese}
           aoMudar={(v) => alterar({ hipotese: v })}
           linhas={4}
+          ia={ia('Hipótese testável, coerente com a questão de pesquisa.')}
         />
       );
     case 4:
@@ -345,6 +421,7 @@ function ConteudoDoPasso({
             rotulo="Objetivo geral *"
             valor={r.objetivoGeral}
             aoMudar={(v) => alterar({ objetivoGeral: v })}
+            ia={ia('Uma frase iniciada por verbo no infinitivo (analisar, investigar, propor...).')}
           />
           <div className="fw-medium mb-2">Objetivos específicos * (ao menos 1)</div>
           <ListaEditavel
@@ -355,6 +432,26 @@ function ConteudoDoPasso({
             somenteLeitura={somenteLeitura}
             textoAdicionar="Adicionar objetivo"
             max={50}
+            extra={
+              <BotaoIALista
+                rotulo="Sugerir objetivos com IA"
+                projetoId={projetoId}
+                desabilitado={somenteLeitura}
+                pedido={() =>
+                  pedidoDeLista({
+                    oQue: 'objetivos específicos, cada um iniciado por verbo no infinitivo',
+                    quantos: 'de 3 a 5',
+                    contexto: ctx(),
+                    existentes: r.objetivos.map((x) => x.texto).filter(Boolean),
+                  })
+                }
+                aoAplicar={(itens) =>
+                  alterar({
+                    objetivos: [...r.objetivos.filter((x) => x.texto.trim()), ...itens.map((texto) => ({ texto }))],
+                  })
+                }
+              />
+            }
             render={(it, set, i) => (
               <textarea
                 className="form-control"
@@ -375,6 +472,9 @@ function ConteudoDoPasso({
           valor={r.justificativa}
           aoMudar={(v) => alterar({ justificativa: v })}
           linhas={6}
+          ia={ia(
+            'Relevância científica e social, lacuna na literatura e contribuição esperada, sem citar referências inventadas.',
+          )}
           ajuda='Se não se aplica, escreva "N/D".'
         />
       );
@@ -389,6 +489,35 @@ function ConteudoDoPasso({
             rotuloItem={(i) => `Palavra-chave ${i + 1}`}
             somenteLeitura={somenteLeitura}
             textoAdicionar="Adicionar palavra-chave"
+            extra={
+              <BotaoIALista
+                rotulo="Sugerir palavras-chave com IA"
+                projetoId={projetoId}
+                desabilitado={somenteLeitura}
+                pedido={() =>
+                  pedidoDeLista({
+                    oQue: 'palavras-chave (termos de busca) em português, inglês e espanhol',
+                    quantos: 'de 3 a 6 por idioma',
+                    regras:
+                      'Formato de cada linha: termo | código do idioma (pt, en ou es). Exemplo: dados abertos | pt',
+                    contexto: ctx(),
+                    existentes: r.palavrasChave.map((x) => x.termo).filter(Boolean),
+                  })
+                }
+                aoAplicar={(itens) =>
+                  alterar({
+                    palavrasChave: [
+                      ...r.palavrasChave.filter((x) => x.termo.trim()),
+                      ...itens.map((l) => {
+                        const [termo, cod] = l.split('|').map((x) => x.trim());
+                        const idioma = idiomas.data?.find((x) => x.codigo === cod?.toLowerCase().slice(0, 2));
+                        return { termo: termo.slice(0, 150), idiomaId: idioma?.id ?? null };
+                      }),
+                    ],
+                  })
+                }
+              />
+            }
             render={(it, set, i) => (
               <div className="row g-2">
                 <div className="col-sm-8">
@@ -432,6 +561,30 @@ function ConteudoDoPasso({
             somenteLeitura={somenteLeitura}
             textoAdicionar="Adicionar string"
             max={50}
+            extra={
+              <BotaoIALista
+                rotulo="Sugerir strings com IA"
+                projetoId={projetoId}
+                desabilitado={somenteLeitura}
+                pedido={() =>
+                  pedidoDeLista({
+                    oQue: 'strings de busca booleanas para bases científicas (Scopus, Web of Science, PubMed), usando as palavras-chave do protocolo com aspas, AND, OR e parênteses',
+                    quantos: 'de 2 a 3',
+                    regras: 'Cada linha deve ser só a expressão booleana, sem explicação.',
+                    contexto: ctx(),
+                    existentes: r.strings.map((x) => x.expressao).filter(Boolean),
+                  })
+                }
+                aoAplicar={(itens) =>
+                  alterar({
+                    strings: [
+                      ...r.strings.filter((x) => x.expressao.trim()),
+                      ...itens.map((expressao) => ({ baseDadosId: null, campo: 'TODOS' as const, expressao })),
+                    ],
+                  })
+                }
+              />
+            }
             render={(it, set, i) => (
               <div className="row g-2">
                 <div className="col-sm-6">
@@ -570,6 +723,9 @@ function ConteudoDoPasso({
             valor={r.metodologia}
             aoMudar={(v) => alterar({ metodologia: v })}
             linhas={8}
+            ia={ia(
+              'Abordagem, etapas, participantes, instrumentos de coleta e análise dos dados, coerentes com o tipo de metodologia escolhido.',
+            )}
             ajuda="Abordagem, etapas, participantes, instrumentos de coleta (questionário, entrevista, testes) e forma de análise dos dados."
           />
         </>
@@ -583,6 +739,7 @@ function ConteudoDoPasso({
             valor={r.resultadosEsperados}
             aoMudar={(v) => alterar({ resultadosEsperados: v })}
             linhas={5}
+            ia={ia('Resultados e produtos esperados, ligados aos objetivos.')}
           />
           <Campo
             id="riscos"
@@ -590,6 +747,7 @@ function ConteudoDoPasso({
             valor={r.riscos}
             aoMudar={(v) => alterar({ riscos: v })}
             linhas={4}
+            ia={ia()}
             ajuda="Riscos e desconfortos previsíveis para os participantes e as medidas para minimizá-los (pesquisas com seres humanos)."
           />
           <Campo
@@ -598,6 +756,7 @@ function ConteudoDoPasso({
             valor={r.beneficios}
             aoMudar={(v) => alterar({ beneficios: v })}
             linhas={4}
+            ia={ia('Benefícios diretos e indiretos para participantes, ciência e sociedade.')}
           />
           <Tcle projetoId={projetoId} somenteLeitura={somenteLeitura} />
         </>
@@ -609,6 +768,7 @@ function ConteudoDoPasso({
           resumos={r.resumos}
           aoMudar={(resumos) => alterar({ resumos })}
           somenteLeitura={somenteLeitura}
+          contextoIA={ctx}
         />
       );
     default:

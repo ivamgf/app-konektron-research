@@ -11,7 +11,7 @@ const LIMITE_MS = 5 * 60_000;
  * PDFs, importações e exportações rodam no worker: a API responde 202 com `tarefaId`
  * e o app consulta GET /tarefas/:id até CONCLUIDA (resultado traz a URL assinada de 15 min).
  */
-export function useTarefa(intervaloMs = 2000) {
+export function useTarefa(intervaloMs = 2000, limiteMs = LIMITE_MS) {
   const [tarefaId, setTarefaId] = useState<number | null>(null);
   const [tarefa, setTarefa] = useState<Tarefa | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export function useTarefa(intervaloMs = 2000) {
         if (!vivo) return;
         setTarefa(t);
         if (emAndamento(t.status)) {
-          if (Date.now() - inicio > LIMITE_MS)
+          if (Date.now() - inicio > limiteMs)
             setErro('A geração está demorando mais que o normal. Tente de novo em alguns minutos.');
           else timer = setTimeout(consultar, intervaloMs);
         } else if (t.status === 'ERRO') setErro(t.erro ?? 'A tarefa falhou');
@@ -40,7 +40,7 @@ export function useTarefa(intervaloMs = 2000) {
       vivo = false;
       clearTimeout(timer);
     };
-  }, [tarefaId, intervaloMs]);
+  }, [tarefaId, intervaloMs, limiteMs]);
 
   const iniciar = async (url: string, corpo?: unknown) => {
     setErro(null);

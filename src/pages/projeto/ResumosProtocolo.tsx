@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { mensagemDeErro, post } from '../../lib/api';
 import { useIdiomas } from '../../lib/consultas';
 import type { ResumoRascunho } from './protocoloPassos';
+import { BotaoIA } from '../../components/IA';
 
 type Resposta = { traducoes: Record<string, string>; aviso?: string };
 
@@ -16,11 +17,14 @@ export function ResumosProtocolo({
   resumos,
   aoMudar,
   somenteLeitura,
+  contextoIA,
 }: {
   projetoId: string;
   resumos: ResumoRascunho[];
   aoMudar: (r: ResumoRascunho[]) => void;
   somenteLeitura: boolean;
+  /** contexto do protocolo para o botão de IA */
+  contextoIA?: () => string;
 }) {
   const idiomas = useIdiomas();
   const lista = idiomas.data ?? [];
@@ -63,8 +67,8 @@ export function ResumosProtocolo({
   return (
     <div>
       <p className="text-secondary small">
-        Resumo do protocolo em cada idioma (resumo, abstract, resumen). Escreva em um idioma e use a tradução
-        automática para os demais — ela é um ponto de partida e deve ser revisada.
+        Resumo do protocolo em cada idioma (resumo, abstract, resumen). Escreva em um idioma e use a tradução automática
+        para os demais — ela é um ponto de partida e deve ser revisada.
       </p>
 
       {!somenteLeitura && escritos.length > 0 && (
@@ -123,6 +127,17 @@ export function ResumosProtocolo({
               {!lista.some((x) => x.codigo === r.idioma) && <option value={r.idioma}>{r.idioma}</option>}
             </select>
             <span className="small text-secondary me-auto">{palavras(r.texto)} palavra(s)</span>
+            {contextoIA && (
+              <BotaoIA
+                campo={`Resumo em ${nome(r.idioma)}`}
+                orientacao={`Resumo estruturado do protocolo (objetivo, método, resultados esperados), entre 150 e 300 palavras, escrito em ${nome(r.idioma)}.`}
+                contexto={contextoIA}
+                valor={r.texto}
+                aoAplicar={(texto) => atualizar(i, { texto })}
+                projetoId={projetoId}
+                desabilitado={somenteLeitura}
+              />
+            )}
             {!somenteLeitura && fonte && fonte.idioma !== r.idioma && (
               <button
                 type="button"
