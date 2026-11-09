@@ -134,6 +134,10 @@ export function VisaoGeral() {
               <i className="bi bi-file-earmark-pdf me-1" aria-hidden="true" />
               Imprimir projeto inteiro (PDF)
             </BotaoTarefa>
+            <BotaoTarefa url={`/projetos/${p.id}/exportar`} corpo={{ formato: 'docx' }} textoPronto="Baixar DOCX">
+              <i className="bi bi-file-earmark-word me-1" aria-hidden="true" />
+              Projeto inteiro em Word (DOCX)
+            </BotaoTarefa>
           </div>
         </div>
 

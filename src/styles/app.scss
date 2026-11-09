@@ -601,3 +601,20 @@ $k-laranja-texto: #b35500; // laranja com texto branco por cima (4,6:1, WCAG AA)
     color: $k-secondary-900;
   }
 }
+
+// Tradução automática (Google): esconde a barra e o balão do tradutor; a página não desce
+.skiptranslate iframe,
+iframe.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
+  display: none !important;
+}
+body {
+  top: 0 !important;
+}
+font.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
+}

@@ -82,6 +82,15 @@ export default function Revisao() {
           <i className="bi bi-file-earmark-pdf me-1" aria-hidden="true" />
           Relatório PDF
         </BotaoTarefa>
+        <BotaoTarefa
+          url={`/revisoes/${r.id}/relatorio`}
+          corpo={{ formato: 'docx' }}
+          className="btn btn-outline-primary btn-sm"
+          textoPronto="Baixar DOCX"
+        >
+          <i className="bi bi-file-earmark-word me-1" aria-hidden="true" />
+          Relatório DOCX
+        </BotaoTarefa>
       </div>
       <ul className="nav nav-pills mb-3">
         {ABAS.map((a) => (

@@ -90,6 +90,7 @@ export type Protocolo = {
   beneficios?: string | null;
   resultadosEsperados?: string | null;
   tcleArquivoId?: string | null;
+  resumos?: { idiomaId: number; idiomaCodigo: string; idiomaNome: string; texto: string }[];
   parecer: string | null;
   aprovadoEm: string | null;
   concluidoEm: string | null;

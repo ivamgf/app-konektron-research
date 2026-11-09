@@ -20,6 +20,7 @@ import {
   type Rascunho,
 } from './protocoloPassos';
 import { Tcle } from './Tcle';
+import { ResumosProtocolo } from './ResumosProtocolo';
 
 const CONCLUIR = TOTAL_PASSOS + 1; // passo extra: revisão, conclusão e impressão
 
@@ -601,6 +602,15 @@ function ConteudoDoPasso({
           <Tcle projetoId={projetoId} somenteLeitura={somenteLeitura} />
         </>
       );
+    case 11:
+      return (
+        <ResumosProtocolo
+          projetoId={projetoId}
+          resumos={r.resumos}
+          aoMudar={(resumos) => alterar({ resumos })}
+          somenteLeitura={somenteLeitura}
+        />
+      );
     default:
       return null;
   }
@@ -809,15 +819,26 @@ function ModalImprimir({
           </div>
         ))}
       </fieldset>
-      <BotaoTarefa
-        url={`/projetos/${projetoId}/protocolo/pdf`}
-        corpo={corpo}
-        className="btn btn-primary"
-        textoPronto="Abrir PDF"
-      >
-        <i className="bi bi-file-earmark-pdf me-1" aria-hidden="true" />
-        Gerar PDF
-      </BotaoTarefa>
+      <div className="d-flex flex-wrap gap-2">
+        <BotaoTarefa
+          url={`/projetos/${projetoId}/protocolo/pdf`}
+          corpo={corpo}
+          className="btn btn-primary"
+          textoPronto="Abrir PDF"
+        >
+          <i className="bi bi-file-earmark-pdf me-1" aria-hidden="true" />
+          Gerar PDF
+        </BotaoTarefa>
+        <BotaoTarefa
+          url={`/projetos/${projetoId}/protocolo/pdf`}
+          corpo={{ ...corpo, formato: 'docx' }}
+          className="btn btn-outline-primary"
+          textoPronto="Baixar DOCX"
+        >
+          <i className="bi bi-file-earmark-word me-1" aria-hidden="true" />
+          Gerar Word (DOCX)
+        </BotaoTarefa>
+      </div>
     </Modal>
   );
 }

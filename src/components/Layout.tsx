@@ -5,10 +5,14 @@ import { useAuth } from '../auth/AuthProvider';
 import { get } from '../lib/api';
 import type { Notificacao } from '../lib/tipos';
 import { Carregando } from './ui';
+import { SeletorIdioma } from './SeletorIdioma';
 
 export function Marca({ grande = false }: { grande?: boolean }) {
   return (
-    <span className={`d-inline-flex align-items-center gap-2 fw-bold ${grande ? 'fs-4' : ''}`}>
+    <span
+      className={`d-inline-flex align-items-center gap-2 fw-bold notranslate ${grande ? 'fs-4' : ''}`}
+      translate="no"
+    >
       <img src="/favicon.svg" alt="" width={grande ? 40 : 28} height={grande ? 40 : 28} />
       <span>
         Konektron <span className="text-primary">Research</span>
@@ -106,7 +110,10 @@ export function Layout() {
           </>
         )}
         <div className="mt-auto pt-4 small">
-          <div className="fw-bold text-truncate">{usuario.nome}</div>
+          <SeletorIdioma className="mb-3" />
+          <div className="fw-bold text-truncate notranslate" translate="no">
+            {usuario.nome}
+          </div>
           <div className="text-secondary text-truncate mb-2">{usuario.email}</div>
           <button className="btn btn-outline-secondary btn-sm w-100" onClick={sair}>
             <i className="bi bi-box-arrow-right me-1" aria-hidden="true" />
@@ -124,6 +131,7 @@ export function Layout() {
             <i className="bi bi-list" aria-hidden="true" />
           </button>
           <Marca />
+          <SeletorIdioma />
           <Link
             to="/notificacoes"
             className="btn btn-outline-secondary btn-sm position-relative"

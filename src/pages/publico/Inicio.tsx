@@ -5,7 +5,8 @@ import { LayoutPublico } from './LayoutPublico';
 const PASSOS = [
   {
     titulo: 'Planeje o protocolo',
-    texto: 'Tema, questões, hipótese, objetivos, palavras-chave e strings de busca em um assistente de 8 passos.',
+    texto:
+      'Tema, questões, hipótese, objetivos, palavras-chave, strings de busca, metodologia e resumos em um assistente de 11 passos.',
   },
   {
     titulo: 'Busque e importe',
@@ -66,9 +67,9 @@ const RECURSOS = [
 ];
 
 const NUMEROS = [
-  ['8', 'passos no protocolo'],
+  ['11', 'passos no protocolo'],
   ['NBR · APA', 'normas de referência'],
-  ['PDF · XLSX', 'formatos de exportação'],
+  ['PDF · DOCX · XLSX', 'formatos de exportação'],
 ];
 
 /** Página inicial aberta: apresenta o Konektron Research antes do login */
