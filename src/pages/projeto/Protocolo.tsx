@@ -20,6 +20,7 @@ import {
   type Rascunho,
 } from './protocoloPassos';
 import { Tcle } from './Tcle';
+import { ResumosProtocolo } from './ResumosProtocolo';
 
 const CONCLUIR = TOTAL_PASSOS + 1; // passo extra: revisão, conclusão e impressão
 
@@ -600,6 +601,15 @@ function ConteudoDoPasso({
           />
           <Tcle projetoId={projetoId} somenteLeitura={somenteLeitura} />
         </>
+      );
+    case 11:
+      return (
+        <ResumosProtocolo
+          projetoId={projetoId}
+          resumos={r.resumos}
+          aoMudar={(resumos) => alterar({ resumos })}
+          somenteLeitura={somenteLeitura}
+        />
       );
     default:
       return null;

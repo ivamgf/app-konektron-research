@@ -12,6 +12,7 @@ export const PASSOS = [
   { n: 8, titulo: 'Descritores' },
   { n: 9, titulo: 'Metodologia' },
   { n: 10, titulo: 'Riscos, benefícios e resultados' },
+  { n: 11, titulo: 'Resumo' },
 ] as const;
 export const TOTAL_PASSOS = PASSOS.length;
 
@@ -43,6 +44,11 @@ export const METODOLOGIAS: [string, string][] = [
   ['OUTRA', 'Outra'],
 ];
 
+/** Resumo em um idioma (código ISO 639-1 do catálogo: pt, en, es…) */
+export type ResumoRascunho = { idioma: string; texto: string };
+/** Idiomas que já aparecem no passo Resumo de um protocolo novo */
+export const IDIOMAS_PADRAO_RESUMO = ['pt', 'en', 'es'];
+
 export type Rascunho = {
   tema: string;
   questaoPesquisa: string;
@@ -60,6 +66,7 @@ export type Rascunho = {
   riscos: string;
   beneficios: string;
   resultadosEsperados: string;
+  resumos: ResumoRascunho[];
 };
 
 export function rascunhoDe(p: Protocolo): Rascunho {
@@ -80,6 +87,9 @@ export function rascunhoDe(p: Protocolo): Rascunho {
     riscos: p.riscos ?? '',
     beneficios: p.beneficios ?? '',
     resultadosEsperados: p.resultadosEsperados ?? '',
+    resumos: p.resumos?.length
+      ? p.resumos.map((r) => ({ idioma: r.idiomaCodigo, texto: r.texto }))
+      : IDIOMAS_PADRAO_RESUMO.map((idioma) => ({ idioma, texto: '' })),
   };
 }
 
@@ -125,6 +135,11 @@ export function corpoDoPasso(passo: number, r: Rascunho, proximoPasso: number) {
         beneficios: texto(r.beneficios),
         resultadosEsperados: texto(r.resultadosEsperados),
       };
+    case 11:
+      return {
+        ...base,
+        resumos: r.resumos.filter((x) => x.texto.trim()).map((x) => ({ idioma: x.idioma, texto: x.texto.trim() })),
+      };
     default:
       return base;
   }
@@ -143,5 +158,6 @@ export function passosPreenchidos(r: Rascunho): Record<number, boolean> {
     8: r.descritores.some((x) => x.termo.trim()),
     9: !!r.metodologiaTipo && (r.metodologiaTipo !== 'OUTRA' || !!r.metodologiaOutro.trim()),
     10: !!r.resultadosEsperados.trim(),
+    11: r.resumos.some((x) => x.texto.trim()),
   };
 }

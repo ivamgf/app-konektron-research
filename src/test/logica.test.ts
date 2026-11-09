@@ -81,13 +81,33 @@ describe('assistente do protocolo', () => {
       metodologiaOutro: 'Netnografia',
     });
     expect(corpoDoPasso(10, { ...vazio, resultadosEsperados: 'Um framework', riscos: '  ' }, 11)).toEqual({
-      passoAtual: 10, // a API aceita só 1 a 10
+      passoAtual: 11,
       riscos: null,
       beneficios: null,
       resultadosEsperados: 'Um framework',
     });
     expect(passosPreenchidos({ ...vazio, metodologiaTipo: 'OUTRA' })[9]).toBe(false);
     expect(passosPreenchidos({ ...vazio, resultadosEsperados: 'x' })[10]).toBe(true);
+  });
+  it('passo 11 começa com português, inglês e espanhol e envia só os resumos com texto', () => {
+    expect(vazio.resumos.map((r) => r.idioma)).toEqual(['pt', 'en', 'es']);
+    const r = {
+      ...vazio,
+      resumos: [
+        { idioma: 'pt', texto: ' Resumo ' },
+        { idioma: 'en', texto: '' },
+        { idioma: 'fr', texto: 'Résumé' },
+      ],
+    };
+    expect(corpoDoPasso(11, r, 12)).toEqual({
+      passoAtual: 11, // a API aceita só 1 a 11
+      resumos: [
+        { idioma: 'pt', texto: 'Resumo' },
+        { idioma: 'fr', texto: 'Résumé' },
+      ],
+    });
+    expect(passosPreenchidos(vazio)[11]).toBe(false);
+    expect(passosPreenchidos(r)[11]).toBe(true);
   });
   it('marca como preenchido o passo 6 só com 3 palavras-chave (RN02)', () => {
     const duas = {
