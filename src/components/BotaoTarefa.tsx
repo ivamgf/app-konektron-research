@@ -27,7 +27,8 @@ export function useTarefa(intervaloMs = 2000) {
         if (!vivo) return;
         setTarefa(t);
         if (emAndamento(t.status)) {
-          if (Date.now() - inicio > LIMITE_MS) setErro('A geração está demorando mais que o normal. Tente de novo em alguns minutos.');
+          if (Date.now() - inicio > LIMITE_MS)
+            setErro('A geração está demorando mais que o normal. Tente de novo em alguns minutos.');
           else timer = setTimeout(consultar, intervaloMs);
         } else if (t.status === 'ERRO') setErro(t.erro ?? 'A tarefa falhou');
       } catch (e) {
@@ -54,7 +55,15 @@ export function useTarefa(intervaloMs = 2000) {
 
   const andamento = !!tarefaId && !erro && (!tarefa || emAndamento(tarefa.status));
   const url = tarefa?.status === 'CONCLUIDA' ? tarefa.resultado?.url : undefined;
-  return { iniciar, tarefa, erro, andamento, url, pdf: !!url && ehPdf(tarefa?.resultado?.arquivo), nome: tarefa?.resultado?.arquivo?.nomeOriginal };
+  return {
+    iniciar,
+    tarefa,
+    erro,
+    andamento,
+    url,
+    pdf: !!url && ehPdf(tarefa?.resultado?.arquivo),
+    nome: tarefa?.resultado?.arquivo?.nomeOriginal,
+  };
 }
 
 /** Botão que dispara a tarefa e, ao concluir, mostra o link de download */

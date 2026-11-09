@@ -114,6 +114,14 @@ export default function Analise() {
           >
             PDF
           </BotaoTarefa>
+          <BotaoTarefa
+            url={`/analises/${a.id}/exportar`}
+            corpo={{ formato: 'docx' }}
+            className="btn btn-outline-primary btn-sm"
+            textoPronto="Baixar DOCX"
+          >
+            DOCX
+          </BotaoTarefa>
           {dono && (
             <BotaoConfirmar
               titulo="Excluir análise"

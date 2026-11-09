@@ -12,6 +12,10 @@ import './styles/app.scss';
 import { AuthProvider } from './auth/AuthProvider';
 import { App } from './App';
 import { lerErro } from './lib/api';
+import { iniciarTraducaoDoSite } from './lib/traducaoSite';
+
+// inglês/espanhol: carrega a tradução automática antes de montar o app
+iniciarTraducaoDoSite();
 
 const queryClient = new QueryClient({
   defaultOptions: {

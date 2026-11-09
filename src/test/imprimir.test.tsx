@@ -20,19 +20,35 @@ describe('BotaoImprimir', () => {
 
   it('"Projeto inteiro" gera o PDF do projeto e mostra o link ao concluir', async () => {
     post.mockResolvedValueOnce({ tarefaId: 7 });
-    get.mockResolvedValueOnce({ id: 7, status: 'CONCLUIDA', resultado: { url: 'https://x/projeto.pdf' } });
+    get.mockResolvedValueOnce({
+      id: 7,
+      status: 'CONCLUIDA',
+      resultado: {
+        url: 'https://x/projeto.pdf',
+        arquivo: { nomeOriginal: 'projeto.pdf', mimeType: 'application/pdf' },
+      },
+    });
     render(<BotaoImprimir projetoId="p1" aoImprimirProtocolo={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: /Imprimir/ }));
-    await userEvent.click(screen.getByRole('menuitem', { name: /Projeto inteiro/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /^Projeto inteiro(?! em Word)/ }));
     expect(post).toHaveBeenCalledWith('/projetos/p1/exportar', { formato: 'pdf' });
-    await waitFor(() => expect(screen.getByRole('link', { name: /Abrir PDF do projeto/ })).toHaveAttribute('href', 'https://x/projeto.pdf'));
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /Abrir PDF do projeto/ })).toHaveAttribute(
+        'href',
+        'https://x/projeto.pdf',
+      ),
+    );
   });
 
   it('continua acompanhando enquanto a tarefa está EXECUTANDO e oferece visualizar, imprimir e baixar', async () => {
     post.mockResolvedValueOnce({ tarefaId: 8 });
     get
       .mockResolvedValueOnce({ id: 8, status: 'EXECUTANDO' })
-      .mockResolvedValueOnce({ id: 8, status: 'CONCLUIDA', resultado: { url: 'https://x/p.pdf', arquivo: { nomeOriginal: 'projeto.pdf', mimeType: 'application/pdf' } } });
+      .mockResolvedValueOnce({
+        id: 8,
+        status: 'CONCLUIDA',
+        resultado: { url: 'https://x/p.pdf', arquivo: { nomeOriginal: 'projeto.pdf', mimeType: 'application/pdf' } },
+      });
     const { BotaoTarefa } = await import('../components/BotaoTarefa');
     render(
       <BotaoTarefa url="/projetos/p1/exportar" textoPronto="Abrir PDF">
@@ -42,9 +58,32 @@ describe('BotaoImprimir', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Gerar' }));
     expect(await screen.findByRole('button', { name: /Gerando/ })).toBeDisabled();
     // segunda consulta acontece depois do intervalo (2 s)
-    expect(await screen.findByRole('link', { name: /Abrir PDF/ }, { timeout: 4000 })).toHaveAttribute('href', 'https://x/p.pdf');
+    expect(await screen.findByRole('link', { name: /Abrir PDF/ }, { timeout: 4000 })).toHaveAttribute(
+      'href',
+      'https://x/p.pdf',
+    );
     expect(screen.getByRole('button', { name: /Imprimir/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Baixar PDF/ })).toBeInTheDocument();
+  });
+
+  it('"Projeto inteiro em Word" gera o DOCX e oferece o download', async () => {
+    post.mockResolvedValueOnce({ tarefaId: 9 });
+    get.mockResolvedValueOnce({
+      id: 9,
+      status: 'CONCLUIDA',
+      resultado: {
+        url: 'https://x/projeto.docx',
+        arquivo: {
+          nomeOriginal: 'projeto.docx',
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        },
+      },
+    });
+    render(<BotaoImprimir projetoId="p1" aoImprimirProtocolo={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /Imprimir/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Word \(DOCX\)/ }));
+    expect(post).toHaveBeenCalledWith('/projetos/p1/exportar', { formato: 'docx' });
+    expect(await screen.findByRole('button', { name: /Baixar DOCX do projeto/ })).toBeInTheDocument();
   });
 
   it('Esc fecha o menu', async () => {

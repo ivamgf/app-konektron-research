@@ -47,10 +47,13 @@ export function BotaoImprimir({
     itens[(i + (e.key === 'ArrowDown' ? 1 : itens.length - 1)) % itens.length]?.focus();
   };
 
-  const escolher = (opcao: 'protocolo' | 'projeto') => {
+  const [formato, setFormato] = useState<'pdf' | 'docx'>('pdf');
+  const escolher = (opcao: 'protocolo' | 'projeto' | 'projeto-docx') => {
     setAberto(false);
-    if (opcao === 'protocolo') aoImprimirProtocolo();
-    else projeto.iniciar(`/projetos/${projetoId}/exportar`, { formato: 'pdf' });
+    if (opcao === 'protocolo') return aoImprimirProtocolo();
+    const f = opcao === 'projeto-docx' ? 'docx' : 'pdf';
+    setFormato(f);
+    projeto.iniciar(`/projetos/${projetoId}/exportar`, { formato: f });
   };
 
   return (
@@ -70,12 +73,23 @@ export function BotaoImprimir({
           ) : (
             <i className="bi bi-printer me-1" aria-hidden="true" />
           )}
-          {projeto.andamento ? 'Gerando PDF do projeto…' : 'Imprimir'}
+          {projeto.andamento ? `Gerando ${formato === 'docx' ? 'Word' : 'PDF'} do projeto…` : 'Imprimir'}
         </button>
         {aberto && (
-          <ul id={menuId} className="dropdown-menu show shadow-sm" role="menu" onKeyDown={navegar} style={{ minWidth: '17rem' }}>
+          <ul
+            id={menuId}
+            className="dropdown-menu show shadow-sm"
+            role="menu"
+            onKeyDown={navegar}
+            style={{ minWidth: '17rem' }}
+          >
             <li role="none">
-              <button type="button" role="menuitem" className="dropdown-item py-2" onClick={() => escolher('protocolo')}>
+              <button
+                type="button"
+                role="menuitem"
+                className="dropdown-item py-2"
+                onClick={() => escolher('protocolo')}
+              >
                 <i className="bi bi-file-earmark-text me-2" aria-hidden="true" />
                 Somente o protocolo de pesquisa
                 <small className="d-block text-secondary ms-4">Escolha a versão e as seções</small>
@@ -88,10 +102,29 @@ export function BotaoImprimir({
                 <small className="d-block text-secondary ms-4">Protocolo, revisões e análises</small>
               </button>
             </li>
+            <li role="none">
+              <button
+                type="button"
+                role="menuitem"
+                className="dropdown-item py-2"
+                onClick={() => escolher('projeto-docx')}
+              >
+                <i className="bi bi-file-earmark-word me-2" aria-hidden="true" />
+                Projeto inteiro em Word (DOCX)
+                <small className="d-block text-secondary ms-4">Para editar no Word ou no LibreOffice</small>
+              </button>
+            </li>
           </ul>
         )}
       </div>
-      {projeto.url && <LinksDoArquivo url={projeto.url} pdf texto="Abrir PDF do projeto" nome={projeto.nome ?? 'projeto.pdf'} />}
+      {projeto.url && (
+        <LinksDoArquivo
+          url={projeto.url}
+          pdf={projeto.pdf}
+          texto={projeto.pdf ? 'Abrir PDF do projeto' : 'Baixar DOCX do projeto'}
+          nome={projeto.nome ?? (projeto.pdf ? 'projeto.pdf' : 'projeto.docx')}
+        />
+      )}
       {projeto.erro && (
         <span className="text-danger small" role="alert">
           {projeto.erro}

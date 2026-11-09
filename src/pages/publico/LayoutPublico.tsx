@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { Marca, MarcaKonektron } from '../../components/Layout';
+import { SeletorIdioma } from '../../components/SeletorIdioma';
 import { EMAIL_ORKNEYTECH, SITE_ORKNEYTECH } from '../../lib/contato';
 
 /** Páginas abertas (antes do login): cabeçalho com acesso e rodapé KoneKtron · OrkneyTech */
@@ -17,6 +18,7 @@ export function LayoutPublico({ children }: { children: ReactNode }) {
           <Link to="/" className="text-decoration-none text-reset me-auto">
             <Marca />
           </Link>
+          <SeletorIdioma />
           {usuario ? (
             <Link to="/projetos" className="btn btn-primary btn-sm">
               Meus projetos

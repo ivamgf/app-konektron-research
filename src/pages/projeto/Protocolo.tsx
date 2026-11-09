@@ -819,15 +819,26 @@ function ModalImprimir({
           </div>
         ))}
       </fieldset>
-      <BotaoTarefa
-        url={`/projetos/${projetoId}/protocolo/pdf`}
-        corpo={corpo}
-        className="btn btn-primary"
-        textoPronto="Abrir PDF"
-      >
-        <i className="bi bi-file-earmark-pdf me-1" aria-hidden="true" />
-        Gerar PDF
-      </BotaoTarefa>
+      <div className="d-flex flex-wrap gap-2">
+        <BotaoTarefa
+          url={`/projetos/${projetoId}/protocolo/pdf`}
+          corpo={corpo}
+          className="btn btn-primary"
+          textoPronto="Abrir PDF"
+        >
+          <i className="bi bi-file-earmark-pdf me-1" aria-hidden="true" />
+          Gerar PDF
+        </BotaoTarefa>
+        <BotaoTarefa
+          url={`/projetos/${projetoId}/protocolo/pdf`}
+          corpo={{ ...corpo, formato: 'docx' }}
+          className="btn btn-outline-primary"
+          textoPronto="Baixar DOCX"
+        >
+          <i className="bi bi-file-earmark-word me-1" aria-hidden="true" />
+          Gerar Word (DOCX)
+        </BotaoTarefa>
+      </div>
     </Modal>
   );
 }
