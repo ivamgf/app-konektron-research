@@ -26,6 +26,8 @@ import {
 import { BotaoTarefa } from '../../components/BotaoTarefa';
 import { useProjetoAtual } from '../projeto/ProjetoLayout';
 import { abrirPdf } from '../projeto/Documentos';
+import { BotaoIA } from '../../components/IA';
+import { SugerirRespostas, contextoDoDocumento } from './AnaliseIA';
 import * as fila from './filaOffline';
 
 const ABAS = [
@@ -233,7 +235,8 @@ function DocumentoEmAnalise({
     queryFn: () => get<AnaliseDocumentoDetalhe>(url),
   });
   const [respostas, setRespostas] = useState<Record<string, string>>({});
-  const [extras, setExtras] = useState<{ consideracoes: string; observacoes: string }>({
+  const [extras, setExtras] = useState<{ resumoAssunto: string; consideracoes: string; observacoes: string }>({
+    resumoAssunto: '',
     consideracoes: '',
     observacoes: '',
   });
@@ -257,6 +260,7 @@ function DocumentoEmAnalise({
     for (const x of pend?.corpo.respostas ?? []) r[x.questaoAnaliseId] = x.texto ?? '';
     setRespostas(r);
     setExtras({
+      resumoAssunto: pend?.corpo.resumoAssunto ?? q.data.resumoAssunto ?? '',
       consideracoes: pend?.corpo.consideracoes ?? q.data.consideracoes ?? '',
       observacoes: pend?.corpo.observacoes ?? q.data.observacoes ?? '',
     });
@@ -294,6 +298,7 @@ function DocumentoEmAnalise({
           questaoAnaliseId: id,
           texto: respostas[id]?.trim() ? respostas[id] : null,
         }));
+      if (alteradas.extras.has('resumoAssunto')) corpo.resumoAssunto = extras.resumoAssunto || null;
       if (alteradas.extras.has('consideracoes')) corpo.consideracoes = extras.consideracoes || null;
       if (alteradas.extras.has('observacoes')) corpo.observacoes = extras.observacoes || null;
       setAlteradas({ q: new Set(), extras: new Set() });
@@ -391,15 +396,75 @@ function DocumentoEmAnalise({
       <PainelAba idBase={idAbas} atual={aba} className="card-body">
         {aba === 'questoes' && (
           <fieldset disabled={!edita}>
+            <div className="mb-4 pb-3 border-bottom">
+              <div className="d-flex align-items-end justify-content-between gap-2 mb-2">
+                <label htmlFor={`assunto-${d.id}`} className="form-label fw-medium mb-0">
+                  Resumo do assunto
+                </label>
+                <BotaoIA
+                  campo="Resumo do assunto do documento"
+                  orientacao="Resumo do assunto tratado no documento (problema, método, principais achados e conclusões), em 1 a 3 parágrafos, para servir de base às respostas das questões de análise. Use apenas o que consta nos dados do documento; não invente resultados."
+                  contexto={() => contextoDoDocumento(doc, analise.questoes ?? [])}
+                  valor={extras.resumoAssunto}
+                  aoAplicar={(texto) => {
+                    setExtras((x) => ({ ...x, resumoAssunto: texto }));
+                    setAlteradas((a) => ({ ...a, extras: new Set(a.extras).add('resumoAssunto') }));
+                  }}
+                  projetoId={analise.projetoId}
+                  desabilitado={!edita}
+                />
+              </div>
+              <textarea
+                id={`assunto-${d.id}`}
+                className="form-control"
+                rows={5}
+                value={extras.resumoAssunto}
+                aria-describedby={`assunto-ajuda-${d.id}`}
+                onChange={(e) => {
+                  setExtras({ ...extras, resumoAssunto: e.target.value });
+                  setAlteradas((a) => ({ ...a, extras: new Set(a.extras).add('resumoAssunto') }));
+                }}
+              />
+              <div id={`assunto-ajuda-${d.id}`} className="form-text">
+                Escreva (ou gere com IA) o resumo do assunto antes de responder: a análise do documento reúne este
+                resumo e as respostas às questões de pesquisa.
+              </div>
+            </div>
             {(analise.questoes ?? []).length === 0 && (
               <p className="text-secondary small">A análise não tem questões.</p>
             )}
+            {edita && (analise.questoes ?? []).length > 0 && (
+              <SugerirRespostas
+                questoes={analise.questoes ?? []}
+                respostas={respostas}
+                contexto={() => contextoDoDocumento(doc, analise.questoes ?? [], extras.resumoAssunto)}
+                projetoId={analise.projetoId}
+                aoAplicar={(novas) => {
+                  setRespostas((atual) => ({ ...atual, ...novas }));
+                  setAlteradas((a) => ({ ...a, q: new Set([...a.q, ...Object.keys(novas)]) }));
+                }}
+              />
+            )}
             {(analise.questoes ?? []).map((qa) => (
               <div className="mb-3" key={qa.id}>
-                <label htmlFor={`qa-${qa.id}`} className="form-label">
-                  <span className="k-mono fw-bold text-primary me-2">{qa.codigo}</span>
-                  {qa.enunciado}
-                </label>
+                <div className="d-flex align-items-end justify-content-between gap-2 mb-2">
+                  <label htmlFor={`qa-${qa.id}`} className="form-label mb-0">
+                    <span className="k-mono fw-bold text-primary me-2">{qa.codigo}</span>
+                    {qa.enunciado}
+                  </label>
+                  <BotaoIA
+                    campo={`Resposta à questão ${qa.codigo}`}
+                    orientacao={`Responda à questão de análise "${qa.enunciado}" com base apenas nos dados do documento e no resumo do assunto. Se o documento não traz a informação, diga isso claramente.`}
+                    contexto={() => contextoDoDocumento(doc, [], extras.resumoAssunto)}
+                    valor={respostas[qa.id] ?? ''}
+                    aoAplicar={(texto) => {
+                      setRespostas((atual) => ({ ...atual, [qa.id]: texto }));
+                      setAlteradas((a) => ({ ...a, q: new Set(a.q).add(qa.id) }));
+                    }}
+                    projetoId={analise.projetoId}
+                    desabilitado={!edita}
+                  />
+                </div>
                 <textarea
                   id={`qa-${qa.id}`}
                   className="form-control"

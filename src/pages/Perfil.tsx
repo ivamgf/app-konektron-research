@@ -5,6 +5,7 @@ import { api, get, patch, put } from '../lib/api';
 import type { Usuario } from '../lib/tipos';
 import { BotaoConfirmar, Cabecalho, ErroAlerta } from '../components/ui';
 import { REGRA_SENHA, senhaSchema } from './auth/CartaoAuth';
+import { ConfigIAForm } from '../components/ConfigIA';
 
 /** RF04 (perfil e preferências) e RNF07 (LGPD: exportar e excluir os dados) */
 export default function Perfil() {
@@ -136,6 +137,7 @@ export default function Perfil() {
           </div>
         </div>
         <div className="col-lg-5">
+          <ConfigIAForm />
           <div className="card mb-4">
             <div className="card-body">
               <h2 className="h5">Trocar senha</h2>

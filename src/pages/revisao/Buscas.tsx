@@ -6,6 +6,7 @@ import { data, rotulo } from '../../lib/formato';
 import type { Busca, CampoBusca, EtapaRevisao } from '../../lib/tipos';
 import { BotaoConfirmar, Carregando, ErroAlerta, Situacao } from '../../components/ui';
 import { useProjetoAtual } from '../projeto/ProjetoLayout';
+import { BotaoCompletarDados } from '../../components/CompletarDados';
 import { chaveEtapas } from './Revisao';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -75,7 +76,10 @@ export function Buscas({ revisaoId, etapa }: { revisaoId: string; etapa: EtapaRe
   return (
     <div className="row g-4">
       <div className={podeRegistrar ? 'col-xl-7' : 'col-12'}>
-        <h4 className="h6">Buscas registradas</h4>
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <h4 className="h6 mb-0 me-auto">Buscas registradas</h4>
+          {edita && !!buscas.data?.length && <BotaoCompletarDados url={`/revisoes/${revisaoId}/completar-metadados`} />}
+        </div>
         {buscas.isLoading && <Carregando />}
         <ErroAlerta erro={buscas.error} />
         {buscas.data?.length === 0 && <p className="small text-secondary">Nenhuma busca registrada.</p>}

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { get, mensagemDeErro, patch, put } from '../../lib/api';
-import { chaves, useProtocolo } from '../../lib/consultas';
+import { get, mensagemDeErro, patch, post, put } from '../../lib/api';
+import { chaves, useIdiomas, useProtocolo } from '../../lib/consultas';
 import { dataHora, rotulo } from '../../lib/formato';
 import type { ContagensEtapa, DocumentoTriagem, EtapaRevisao, MotivoExclusao, Revisao } from '../../lib/tipos';
 import { Carregando, ErroAlerta, Situacao, Vazio } from '../../components/ui';
 import { useProjetoAtual } from '../projeto/ProjetoLayout';
 import { abrirPdf } from '../projeto/Documentos';
 import { chaveEtapas } from './Revisao';
+import { ehFase1ou2, gruposDoProtocolo, NOME_ONDE, verificarTermos, type ResultadoTermos } from './termosBusca';
 import {
   corpoDecisao,
   pendenteParaMim,
@@ -100,6 +101,33 @@ function FormExclusao({
   );
 }
 
+/** Quadro da verificação dos termos de busca no documento aberto */
+function ResumoTermos({ r, nomeGrupo }: { r: ResultadoTermos; nomeGrupo: (idioma: string) => string }) {
+  return (
+    <div className={`alert ${r.sugerido ? 'alert-success' : 'alert-light border'} small py-2`}>
+      <div className="fw-medium mb-1">
+        <i className={`bi ${r.sugerido ? 'bi-check2-circle' : 'bi-info-circle'} me-1`} aria-hidden="true" />
+        {r.sugerido
+          ? 'Sugestão: incluir. Todos os termos da busca aparecem no documento.'
+          : `Faltam ${r.faltando.length} de ${r.grupo.termos.length} termos da busca.`}
+        <span className="text-secondary fw-normal"> ({nomeGrupo(r.grupo.idioma)})</span>
+      </div>
+      <ul className="mb-0 ps-3">
+        {r.encontrados.map((t) => (
+          <li key={t.termo}>
+            <strong>{t.termo}</strong>: {t.onde.map((o) => NOME_ONDE[o]).join(', ')}
+          </li>
+        ))}
+        {r.faltando.map((t) => (
+          <li key={t}>
+            <strong>{t}</strong>: <span className="text-danger-emphasis">não encontrado</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** UC08: lista de documentos + painel de leitura, botões grandes Selecionar/Excluir, atalhos S e E e decisão em lote */
 export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevisao }) {
   const { projeto, edita, papel } = useProjetoAtual();
@@ -117,7 +145,40 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [excluindoLote, setExcluindoLote] = useState<Exclusao | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const docs = useMemo(() => q.data?.documentos ?? [], [q.data]);
+  const todosDocs = useMemo(() => q.data?.documentos ?? [], [q.data]);
+  // fases 1 e 2: verificação automática dos termos de busca (sugestão de inclusão)
+  const etapas = useQuery({
+    queryKey: chaveEtapas(revisao.id),
+    queryFn: () => get<EtapaRevisao[]>(`/revisoes/${revisao.id}/etapas`),
+  });
+  const idiomas = useIdiomas();
+  const verificar = ehFase1ou2(etapa, etapas.data);
+  const grupos = useMemo(() => (verificar ? gruposDoProtocolo(protocolo.data) : []), [verificar, protocolo.data]);
+  const termos = useMemo(() => {
+    const m = new Map<string, ResultadoTermos>();
+    for (const d of todosDocs) {
+      const r = verificarTermos(d, grupos);
+      if (r) m.set(d.revisaoDocumentoId, r);
+    }
+    return m;
+  }, [todosDocs, grupos]);
+  const qtdSugeridos = [...termos.values()].filter((r) => r.sugerido).length;
+  const [soSugeridos, setSoSugeridos] = useState(false);
+  const docs = useMemo(
+    () => (soSugeridos ? todosDocs.filter((d) => termos.get(d.revisaoDocumentoId)?.sugerido) : todosDocs),
+    [soSugeridos, todosDocs, termos],
+  );
+  const nomeGrupo = (idioma: string) =>
+    idioma === 'strings'
+      ? 'termos das strings'
+      : idioma === 'sem-idioma'
+        ? 'palavras-chave'
+        : `palavras-chave em ${idiomas.data?.find((i) => String(i.id) === idioma)?.nome.toLowerCase() ?? 'um idioma'}`;
+  const completar = useMutation({
+    mutationFn: (documentoId: string) =>
+      post<{ preenchidos: string[]; fontes: string[] }>(`/documentos/${documentoId}/completar`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['etapa', etapa.id, 'documentos'] }),
+  });
   const atual = docs.find((d) => d.revisaoDocumentoId === atualId) ?? null;
   const dois = q.data?.doisRevisores ?? revisao.doisRevisores;
   const so_exclusao = !etapa.exigeTriagem && etapa.permiteExclusao; // ex.: remoção de duplicados
@@ -416,11 +477,72 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                     )}
                   </div>
                 )}
+                {verificar && (
+                  <div className="border rounded p-2 mb-2 small bg-body" role="status">
+                    {grupos.length ? (
+                      <>
+                        <div className="d-flex flex-wrap align-items-center gap-2">
+                          <i className="bi bi-check2-circle text-success" aria-hidden="true" />
+                          <span className="me-auto">
+                            <strong>{qtdSugeridos}</strong> de {todosDocs.length} com todos os termos da busca
+                            (sugeridos para incluir)
+                          </span>
+                          {podeDecidir && qtdSugeridos > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn-outline-success btn-sm py-0"
+                              onClick={() =>
+                                setMarcados(
+                                  new Set(
+                                    todosDocs
+                                      .filter(
+                                        (d) => termos.get(d.revisaoDocumentoId)?.sugerido && pendenteParaMim(d, dois),
+                                      )
+                                      .map((d) => d.revisaoDocumentoId),
+                                  ),
+                                )
+                              }
+                            >
+                              Marcar sugeridos pendentes
+                            </button>
+                          )}
+                        </div>
+                        <div className="form-check mt-1 mb-0">
+                          <input
+                            id={`so-sugeridos-${etapa.id}`}
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={soSugeridos}
+                            onChange={(e) => setSoSugeridos(e.target.checked)}
+                          />
+                          <label className="form-check-label" htmlFor={`so-sugeridos-${etapa.id}`}>
+                            Mostrar só os sugeridos
+                          </label>
+                        </div>
+                        <details className="mt-1">
+                          <summary>Termos verificados</summary>
+                          <ul className="mb-0 ps-3">
+                            {grupos.map((g) => (
+                              <li key={g.idioma}>
+                                {nomeGrupo(g.idioma)}: {g.termos.join('; ')}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      </>
+                    ) : (
+                      <span className="text-secondary">
+                        Cadastre as palavras-chave e as strings de busca no protocolo para a verificação automática dos
+                        termos nesta fase.
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="list-group k-lista" role="listbox" aria-label="Documentos da etapa">
                   {docs.map((d) => (
                     <div
                       key={d.revisaoDocumentoId}
-                      className={`list-group-item d-flex gap-2 align-items-start p-0 ${d.revisaoDocumentoId === atualId ? 'active' : ''}`}
+                      className={`list-group-item d-flex gap-2 align-items-start p-0 ${d.revisaoDocumentoId === atualId ? 'active' : ''} ${termos.get(d.revisaoDocumentoId)?.sugerido ? 'k-sugerido' : ''}`}
                     >
                       {podeDecidir && (
                         <input
@@ -459,6 +581,12 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                           )}
                           {dois && d.minhaDecisao && (
                             <span className="small text-secondary">você: {rotulo(d.minhaDecisao)}</span>
+                          )}
+                          {termos.get(d.revisaoDocumentoId)?.sugerido && (
+                            <span className="badge bg-success-subtle text-success-emphasis border border-success-subtle">
+                              <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                              Sugerido
+                            </span>
                           )}
                           <span className="small text-secondary ms-auto">{d.ano ?? ''}</span>
                         </div>
@@ -518,6 +646,38 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                         <p className="small">
                           <strong>Palavras-chave:</strong> {atual.palavrasChave}
                         </p>
+                      )}
+                      {edita && (!atual.resumo || !atual.palavrasChave) && (atual.link || atual.doi) && (
+                        <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                          <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm"
+                            disabled={completar.isPending}
+                            onClick={() => completar.mutate(atual.documentoId)}
+                          >
+                            {completar.isPending ? (
+                              <span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />
+                            ) : (
+                              <i className="bi bi-cloud-download me-1" aria-hidden="true" />
+                            )}
+                            Completar resumo e palavras-chave da web
+                          </button>
+                          {completar.data && completar.variables === atual.documentoId && (
+                            <span className="small text-secondary" role="status">
+                              {completar.data.preenchidos.length
+                                ? `Preenchido: ${completar.data.preenchidos.length} campo(s) (${completar.data.fontes.join(', ')}).`
+                                : 'Nada encontrado nas fontes abertas.'}
+                            </span>
+                          )}
+                          {completar.error && (
+                            <span className="small text-danger" role="alert">
+                              {mensagemDeErro(completar.error)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {termos.get(atual.revisaoDocumentoId) && (
+                        <ResumoTermos r={termos.get(atual.revisaoDocumentoId)!} nomeGrupo={nomeGrupo} />
                       )}
                     </div>
 

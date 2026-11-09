@@ -247,6 +247,14 @@ $body-color-dark: #e6e6e6;
 .k-leitura {
   white-space: pre-wrap;
 }
+// triagem: documento com todos os termos da busca (sugerido para incluir)
+.k-lista .list-group-item.k-sugerido {
+  border-left: 4px solid var(--bs-success);
+  background: var(--bs-success-bg-subtle);
+  &.active {
+    border-left-color: var(--bs-primary);
+  }
+}
 .k-fluxograma img {
   max-width: 100%;
   background: #fff;

@@ -315,6 +315,8 @@ export type AnaliseDocumentoDetalhe = {
   analiseId: string;
   documentoId: string;
   progresso: Progresso;
+  /** resumo do assunto do documento, escrito (ou gerado com IA) antes de responder às questões */
+  resumoAssunto?: string | null;
   consideracoes: string | null;
   observacoes: string | null;
   documento: Documento;

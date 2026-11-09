@@ -10,6 +10,7 @@ export function ListaEditavel<T>({
   somenteLeitura,
   textoAdicionar = 'Adicionar',
   max = 100,
+  extra,
 }: {
   itens: T[];
   aoMudar: (itens: T[]) => void;
@@ -19,6 +20,8 @@ export function ListaEditavel<T>({
   somenteLeitura?: boolean;
   textoAdicionar?: string;
   max?: number;
+  /** ação extra ao lado de "Adicionar" (ex.: sugerir itens com IA) */
+  extra?: ReactNode;
 }) {
   const mover = (i: number, d: number) => {
     const j = i + d;
@@ -73,10 +76,13 @@ export function ListaEditavel<T>({
       </ol>
       {itens.length === 0 && <div className="small text-secondary mb-2">Nenhum item.</div>}
       {!somenteLeitura && itens.length < max && (
-        <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => aoMudar([...itens, novo()])}>
-          <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-          {textoAdicionar}
-        </button>
+        <div className="d-flex flex-wrap gap-2">
+          <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => aoMudar([...itens, novo()])}>
+            <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+            {textoAdicionar}
+          </button>
+          {extra}
+        </div>
       )}
     </div>
   );

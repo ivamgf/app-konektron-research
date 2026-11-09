@@ -6,6 +6,7 @@ import { useBases, useIdiomas, useTemas, useTiposDocumento } from '../../lib/con
 import { rotulo } from '../../lib/formato';
 import type { Documento, DocumentoResumo, Pagina } from '../../lib/tipos';
 import { BotaoConfirmar, Carregando, ErroAlerta, Modal, Paginacao, Situacao, Vazio } from '../../components/ui';
+import { BotaoCompletarDados } from '../../components/CompletarDados';
 import { useProjetoAtual } from './ProjetoLayout';
 
 export default function Documentos() {
@@ -64,6 +65,12 @@ export default function Documentos() {
           <option value="-ano">Ano (mais novos)</option>
           <option value="-citacoes">Mais citados</option>
         </select>
+        {edita && (
+          <BotaoCompletarDados
+            url={`/projetos/${projeto.id}/documentos/completar`}
+            className="btn btn-outline-primary"
+          />
+        )}
         {edita && (
           <button className="btn btn-primary ms-auto" onClick={() => setForm({})}>
             <i className="bi bi-plus-lg me-1" aria-hidden="true" />
@@ -186,6 +193,11 @@ function DetalheDocumento({
     onSuccess: atualizar,
     onError: setErro,
   });
+  const completar = useMutation({
+    mutationFn: () => post<{ preenchidos: string[]; fontes: string[] }>(`/documentos/${id}/completar`),
+    onSuccess: atualizar,
+    onError: setErro,
+  });
   const anexar = useMutation({
     mutationFn: (arquivo: File) => {
       const fd = new FormData();
@@ -282,6 +294,28 @@ function DetalheDocumento({
                   <i className="bi bi-arrow-repeat me-1" aria-hidden="true" />
                   Gerar referências de novo
                 </button>
+                {(!doc.resumo || !doc.palavrasChave || !doc.doi) && (
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    disabled={completar.isPending}
+                    onClick={() => completar.mutate()}
+                    title="Busca na web só os campos em branco (resumo, palavras-chave, DOI, ano, autores, periódico)"
+                  >
+                    {completar.isPending ? (
+                      <span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />
+                    ) : (
+                      <i className="bi bi-cloud-download me-1" aria-hidden="true" />
+                    )}
+                    Completar da web
+                  </button>
+                )}
+                {completar.data && (
+                  <span className="small text-secondary align-self-center" role="status">
+                    {completar.data.preenchidos.length
+                      ? `Preenchido: ${completar.data.preenchidos.length} campo(s) (${completar.data.fontes.join(', ')})`
+                      : 'Nada encontrado nas fontes abertas'}
+                  </span>
+                )}
                 <button className="btn btn-outline-primary btn-sm" onClick={() => aoEditar(doc)}>
                   <i className="bi bi-pencil me-1" aria-hidden="true" />
                   Editar
