@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent as TecladoEvento, type ReactNode } from 'react';
 import { mensagemDeErro } from '../lib/api';
 import { corDaSituacao, ICONE_SITUACAO, rotulo } from '../lib/formato';
 
@@ -62,6 +62,9 @@ export function Cabecalho({
   );
 }
 
+const FOCAVEIS =
+  'a[href], button, input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"]), summary';
+
 /** Modal controlado pelo React com a aparência do Bootstrap (sem o JS do Bootstrap) */
 export function Modal({
   titulo,
@@ -79,11 +82,33 @@ export function Modal({
   tamanho?: 'sm' | 'lg' | 'xl';
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const idTitulo = useId();
   useEffect(() => {
     if (!aberto) return;
     const anterior = document.activeElement as HTMLElement | null;
     ref.current?.querySelector<HTMLElement>('input, textarea, select, button:not(.btn-close)')?.focus();
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && aoFechar();
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        aoFechar();
+        return;
+      }
+      // WCAG 2.4.3 / APG Dialog: o Tab fica preso dentro do modal
+      if (e.key !== 'Tab' || !ref.current) return;
+      const focaveis = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCAVEIS)).filter(
+        (el) => !el.hasAttribute('disabled') && el.getClientRects().length > 0,
+      );
+      if (focaveis.length === 0) return;
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      const ativo = document.activeElement;
+      if (e.shiftKey && (ativo === primeiro || !ref.current.contains(ativo))) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && (ativo === ultimo || !ref.current.contains(ativo))) {
+        e.preventDefault();
+        primeiro.focus();
+      }
+    };
     document.addEventListener('keydown', esc);
     document.body.classList.add('modal-open');
     return () => {
@@ -101,12 +126,15 @@ export function Modal({
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={idTitulo}
         onMouseDown={(e) => e.target === e.currentTarget && aoFechar()}
       >
         <div className={`modal-dialog modal-dialog-scrollable ${tamanho ? `modal-${tamanho}` : ''}`} ref={ref}>
           <div className="modal-content">
             <div className="modal-header">
-              <h2 className="modal-title h5">{titulo}</h2>
+              <h2 className="modal-title h5" id={idTitulo}>
+                {titulo}
+              </h2>
               <button type="button" className="btn-close" aria-label="Fechar" onClick={aoFechar} />
             </div>
             <div className="modal-body">{children}</div>
@@ -205,13 +233,23 @@ export function Paginacao({
   if (paginas <= 1) return null;
   return (
     <nav aria-label="Paginação" className="d-flex align-items-center gap-2 mt-3">
-      <button className="btn btn-outline-secondary btn-sm" disabled={page <= 1} onClick={() => aoMudar(page - 1)}>
+      <button
+        type="button"
+        className="btn btn-outline-secondary btn-sm"
+        disabled={page <= 1}
+        onClick={() => aoMudar(page - 1)}
+      >
         <i className="bi bi-chevron-left" aria-hidden="true" /> Anterior
       </button>
-      <span className="small text-secondary">
+      <span className="small text-secondary" aria-live="polite">
         Página {page} de {paginas} · {total} registros
       </span>
-      <button className="btn btn-outline-secondary btn-sm" disabled={page >= paginas} onClick={() => aoMudar(page + 1)}>
+      <button
+        type="button"
+        className="btn btn-outline-secondary btn-sm"
+        disabled={page >= paginas}
+        onClick={() => aoMudar(page + 1)}
+      >
         Próxima <i className="bi bi-chevron-right" aria-hidden="true" />
       </button>
     </nav>
@@ -257,5 +295,100 @@ export function IndicadorSalvo({ estado }: { estado: 'ocioso' | 'salvando' | 'sa
       <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
       Salvo
     </span>
+  );
+}
+
+/**
+ * Abas no padrão WAI-ARIA (APG Tabs): role tablist/tab/tabpanel, aria-selected, tabindex móvel e
+ * navegação por setas, Home e End. Ativação automática: a seta já mostra o painel.
+ */
+export function Abas<T extends string>({
+  abas,
+  atual,
+  aoMudar,
+  rotulo,
+  className = 'nav nav-tabs mb-3',
+  classeBotao = '',
+  idBase,
+  children,
+}: {
+  abas: readonly { id: T; texto: ReactNode; icone?: string }[];
+  atual: T;
+  aoMudar: (id: T) => void;
+  rotulo: string;
+  className?: string;
+  classeBotao?: string;
+  /** quando o painel fica em outro ponto da tela: use <PainelAba idBase=... atual=...> com o mesmo id */
+  idBase?: string;
+  children?: ReactNode;
+}) {
+  const automatico = useId();
+  const base = idBase ?? automatico;
+  const idAba = (id: string) => `${base}-aba-${id}`;
+  const idPainel = `${base}-painel`;
+  const teclado = (e: TecladoEvento<HTMLButtonElement>, i: number) => {
+    const n = abas.length;
+    const destino =
+      e.key === 'ArrowRight' || e.key === 'ArrowDown'
+        ? (i + 1) % n
+        : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+          ? (i - 1 + n) % n
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? n - 1
+              : -1;
+    if (destino < 0) return;
+    e.preventDefault();
+    aoMudar(abas[destino].id);
+    document.getElementById(idAba(abas[destino].id))?.focus();
+  };
+  return (
+    <>
+      <ul className={className} role="tablist" aria-label={rotulo}>
+        {abas.map((a, i) => (
+          <li className="nav-item" role="presentation" key={a.id}>
+            <button
+              type="button"
+              role="tab"
+              id={idAba(a.id)}
+              aria-selected={atual === a.id}
+              aria-controls={idPainel}
+              tabIndex={atual === a.id ? 0 : -1}
+              className={`nav-link ${classeBotao} ${atual === a.id ? 'active' : ''}`}
+              onClick={() => aoMudar(a.id)}
+              onKeyDown={(e) => teclado(e, i)}
+            >
+              {a.icone && <i className={`bi ${a.icone} me-1`} aria-hidden="true" />}
+              {a.texto}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {children !== undefined && (
+        <PainelAba idBase={base} atual={atual}>
+          {children}
+        </PainelAba>
+      )}
+    </>
+  );
+}
+
+/** Painel das <Abas> quando ele não fica logo abaixo da lista de abas */
+export function PainelAba({
+  idBase,
+  atual,
+  className,
+  children,
+}: {
+  idBase: string;
+  atual: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div role="tabpanel" id={`${idBase}-painel`} aria-labelledby={`${idBase}-aba-${atual}`} className={className}>
+      {children}
+    </div>
   );
 }

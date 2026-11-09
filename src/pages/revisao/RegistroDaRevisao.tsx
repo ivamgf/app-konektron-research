@@ -51,6 +51,7 @@ export function RegistroDaRevisao({ revisao }: { revisao: Revisao }) {
           <a className="btn btn-primary btn-sm" href={revisao.registroUrl} target="_blank" rel="noreferrer noopener">
             <i className="bi bi-box-arrow-up-right me-1" aria-hidden="true" />
             Abrir registro
+            <span className="visually-hidden"> (abre em nova aba)</span>
           </a>
         )}
         {!editando && dono && (

@@ -5,7 +5,7 @@ import { get, patch, put } from '../../lib/api';
 import { chaves } from '../../lib/consultas';
 import { corDaSituacao, dataHora, ICONE_SITUACAO, rotulo } from '../../lib/formato';
 import type { EtapaRevisao, Revisao as TRevisao } from '../../lib/tipos';
-import { Carregando, ErroAlerta, Modal, Situacao } from '../../components/ui';
+import { Abas, Carregando, ErroAlerta, Modal, Situacao } from '../../components/ui';
 import { BotaoTarefa } from '../../components/BotaoTarefa';
 import { useProjetoAtual } from '../projeto/ProjetoLayout';
 import { Buscas } from './Buscas';
@@ -35,7 +35,7 @@ export default function Revisao() {
   const { revisaoId = '' } = useParams();
   const { projeto } = useProjetoAtual();
   const [params, setParams] = useSearchParams();
-  const aba = params.get('aba') ?? 'etapas';
+  const aba = (ABAS.find((a) => a.id === params.get('aba'))?.id ?? 'etapas') as (typeof ABAS)[number]['id'];
   const revisao = useQuery({
     queryKey: chaves.revisao(revisaoId),
     queryFn: () => get<TRevisao>(`/revisoes/${revisaoId}`),
@@ -63,6 +63,7 @@ export default function Revisao() {
                 {r.diretrizUrl ? (
                   <a href={r.diretrizUrl} target="_blank" rel="noreferrer">
                     {r.diretrizSigla} {r.diretrizVersao}
+                    <span className="visually-hidden"> (abre em nova aba)</span>
                   </a>
                 ) : (
                   `${r.diretrizSigla} ${r.diretrizVersao ?? ''}`
@@ -92,22 +93,20 @@ export default function Revisao() {
           Relatório DOCX
         </BotaoTarefa>
       </div>
-      <ul className="nav nav-pills mb-3">
-        {ABAS.map((a) => (
-          <li className="nav-item" key={a.id}>
-            <button className={`nav-link ${aba === a.id ? 'active' : ''}`} onClick={() => setParams({ aba: a.id })}>
-              <i className={`bi ${a.icone} me-1`} aria-hidden="true" />
-              {a.texto}
-            </button>
-          </li>
-        ))}
-      </ul>
-      {aba === 'etapas' && <Etapas revisao={r} />}
-      {aba === 'importar' && <ImportacaoTriagem revisao={r} />}
-      {aba === 'painel' && <Painel revisao={r} />}
-      {aba === 'diagrama' && <DiagramaFluxo revisaoId={r.id} />}
-      {aba === 'checklist' && <Checklist revisaoId={r.id} />}
-      {aba === 'documentos' && <DocumentosDaRevisao revisaoId={r.id} />}
+      <Abas
+        abas={ABAS}
+        atual={aba}
+        aoMudar={(id) => setParams({ aba: id })}
+        rotulo="Seções da revisão"
+        className="nav nav-pills mb-3"
+      >
+        {aba === 'etapas' && <Etapas revisao={r} />}
+        {aba === 'importar' && <ImportacaoTriagem revisao={r} />}
+        {aba === 'painel' && <Painel revisao={r} />}
+        {aba === 'diagrama' && <DiagramaFluxo revisaoId={r.id} />}
+        {aba === 'checklist' && <Checklist revisaoId={r.id} />}
+        {aba === 'documentos' && <DocumentosDaRevisao revisaoId={r.id} />}
+      </Abas>
       <RegistroDaRevisao revisao={r} />
     </>
   );

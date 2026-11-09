@@ -34,9 +34,20 @@ export function CartaoAuth({
   );
 }
 
-/** Mensagem de erro de um campo do formulário */
-export function ErroCampo({ mensagem }: { mensagem?: string }) {
-  return mensagem ? <div className="invalid-feedback d-block">{mensagem}</div> : null;
+/** Mensagem de erro de um campo do formulário (ligue ao campo com ariaErro(id, erro)) */
+export function ErroCampo({ mensagem, id }: { mensagem?: string; id?: string }) {
+  return mensagem ? (
+    <div className="invalid-feedback d-block" id={id ? `${id}-erro` : undefined}>
+      <i className="bi bi-exclamation-circle me-1" aria-hidden="true" />
+      {mensagem}
+    </div>
+  ) : null;
+}
+
+/** WCAG 3.3.1 / ARIA: marca o campo como inválido e aponta para a mensagem de erro */
+export function ariaErro(id: string, erro: unknown, descricao?: string) {
+  const ids = [descricao, erro ? `${id}-erro` : undefined].filter(Boolean).join(' ');
+  return { 'aria-invalid': erro ? true : undefined, 'aria-describedby': ids || undefined } as const;
 }
 
 // Mesma regra de senha da API (auth.schemas.ts)

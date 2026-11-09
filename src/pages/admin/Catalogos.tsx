@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { del, get, patch, post } from '../../lib/api';
 import { useChecklists } from '../../lib/consultas';
 import type { ItemChecklistModelo } from '../../lib/tipos';
-import { BotaoConfirmar, Cabecalho, Carregando, ErroAlerta, Modal } from '../../components/ui';
+import { Abas, BotaoConfirmar, Cabecalho, Carregando, ErroAlerta, Modal } from '../../components/ui';
 
 type CampoCat = {
   nome: string;
@@ -89,16 +89,14 @@ export default function Catalogos() {
   return (
     <>
       <Cabecalho titulo="Catálogos" subtitulo="Dados de referência usados em todos os projetos" />
-      <ul className="nav nav-tabs mb-3">
-        {CATALOGOS.map((c) => (
-          <li className="nav-item" key={c.id}>
-            <button className={`nav-link ${aba === c.id ? 'active' : ''}`} onClick={() => setAba(c.id)}>
-              {c.titulo}
-            </button>
-          </li>
-        ))}
-      </ul>
-      <EditorCatalogo key={cat.id} cat={cat} />
+      <Abas
+        abas={CATALOGOS.map((c) => ({ id: c.id, texto: c.titulo }))}
+        atual={aba}
+        aoMudar={setAba}
+        rotulo="Catálogos"
+      >
+        <EditorCatalogo key={cat.id} cat={cat} />
+      </Abas>
     </>
   );
 }

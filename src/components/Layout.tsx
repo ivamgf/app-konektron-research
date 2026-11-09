@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
@@ -68,6 +68,17 @@ export function Layout() {
   const { usuario, carregando, sair } = useAuth();
   const local = useLocation();
   const [menuAberto, setMenuAberto] = useState(false);
+  // menu lateral no celular: Esc fecha e devolve o foco ao botão que o abriu
+  useEffect(() => {
+    if (!menuAberto) return;
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setMenuAberto(false);
+      document.getElementById('botao-menu')?.focus();
+    };
+    document.addEventListener('keydown', esc);
+    return () => document.removeEventListener('keydown', esc);
+  }, [menuAberto]);
   const naoLidas = useQuery({
     queryKey: ['notificacoes', 'nao-lidas'],
     queryFn: () => get<Notificacao[]>('/notificacoes', { naoLidas: true }),
@@ -85,8 +96,9 @@ export function Layout() {
         <i className={`bi ${m.icone}`} aria-hidden="true" />
         {m.texto}
         {m.para === '/notificacoes' && qtd > 0 && (
-          <span className="badge rounded-pill text-bg-warning ms-auto" aria-label={`${qtd} não lidas`}>
+          <span className="badge rounded-pill text-bg-warning ms-auto">
             {qtd}
+            <span className="visually-hidden"> não lidas</span>
           </span>
         )}
       </NavLink>
@@ -98,7 +110,14 @@ export function Layout() {
       <a href="#conteudo" className="visually-hidden-focusable position-absolute p-2">
         Pular para o conteúdo
       </a>
-      <aside className={`k-sidebar p-3 d-flex flex-column ${menuAberto ? 'aberta' : ''}`} aria-label="Menu principal">
+      {menuAberto && (
+        <div className="k-sidebar-fundo d-md-none" aria-hidden="true" onClick={() => setMenuAberto(false)} />
+      )}
+      <nav
+        id="menu-principal"
+        className={`k-sidebar p-3 d-flex flex-column ${menuAberto ? 'aberta' : ''}`}
+        aria-label="Menu principal"
+      >
         <Link to="/projetos" className="text-decoration-none text-reset mb-4">
           <Marca />
         </Link>
@@ -120,12 +139,16 @@ export function Layout() {
             Sair
           </button>
         </div>
-      </aside>
+      </nav>
       <div className="k-main">
         <header className="d-md-none d-flex align-items-center justify-content-between border-bottom p-2 bg-body">
           <button
+            id="botao-menu"
+            type="button"
             className="btn btn-outline-secondary btn-sm"
-            aria-label="Abrir menu"
+            aria-label="Menu"
+            aria-expanded={menuAberto}
+            aria-controls="menu-principal"
             onClick={() => setMenuAberto((v) => !v)}
           >
             <i className="bi bi-list" aria-hidden="true" />
@@ -135,17 +158,20 @@ export function Layout() {
           <Link
             to="/notificacoes"
             className="btn btn-outline-secondary btn-sm position-relative"
-            aria-label="Notificações"
+            aria-label={qtd > 0 ? `Notificações: ${qtd} não lidas` : 'Notificações'}
           >
             <i className="bi bi-bell" aria-hidden="true" />
             {qtd > 0 && (
-              <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-warning">
+              <span
+                className="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-warning"
+                aria-hidden="true"
+              >
                 {qtd}
               </span>
             )}
           </Link>
         </header>
-        <main id="conteudo" className="container-fluid p-3 p-lg-4">
+        <main id="conteudo" tabIndex={-1} className="container-fluid p-3 p-lg-4">
           <Outlet />
         </main>
       </div>

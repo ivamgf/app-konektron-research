@@ -46,7 +46,7 @@ export function ProjetoLayout() {
 
   return (
     <ProjetoContext.Provider value={{ projeto: p, papel, edita: podeEditar(papel), dono: ehDono(papel) }}>
-      <nav aria-label="breadcrumb">
+      <nav aria-label="Trilha de navegação">
         <ol className="breadcrumb small mb-1">
           <li className="breadcrumb-item">
             <Link to="/projetos">Projetos</Link>
@@ -61,16 +61,18 @@ export function ProjetoLayout() {
         <span className="badge text-bg-light border">{rotulo(papel)}</span>
         {p.status === 'ARQUIVADO' && <span className="badge text-bg-secondary">Arquivado</span>}
       </div>
-      <ul className="nav nav-tabs mb-4 flex-nowrap overflow-auto">
-        {abas.map((a) => (
-          <li className="nav-item" key={a.para}>
-            <NavLink end={a.para === ''} to={a.para} className="nav-link text-nowrap">
-              <i className={`bi ${a.icone} me-1`} aria-hidden="true" />
-              {a.texto}
-            </NavLink>
-          </li>
-        ))}
-      </ul>
+      <nav aria-label="Seções do projeto">
+        <ul className="nav nav-tabs mb-4 flex-nowrap overflow-auto">
+          {abas.map((a) => (
+            <li className="nav-item" key={a.para}>
+              <NavLink end={a.para === ''} to={a.para} className="nav-link text-nowrap">
+                <i className={`bi ${a.icone} me-1`} aria-hidden="true" />
+                {a.texto}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
       <Outlet />
     </ProjetoContext.Provider>
   );

@@ -8,8 +8,8 @@ import { get, post } from '../lib/api';
 import { chaves } from '../lib/consultas';
 import { data, rotulo } from '../lib/formato';
 import type { Projeto } from '../lib/tipos';
-import { Cabecalho, Carregando, ErroAlerta, Modal, Situacao, Vazio } from '../components/ui';
-import { ErroCampo } from './auth/CartaoAuth';
+import { Abas, Cabecalho, Carregando, ErroAlerta, Modal, Situacao, Vazio } from '../components/ui';
+import { ariaErro, ErroCampo } from './auth/CartaoAuth';
 import { TOTAL_PASSOS } from './projeto/protocoloPassos';
 
 // RF05: título, área, instituição, programa, datas
@@ -74,8 +74,13 @@ export function FormProjeto({
         <label htmlFor="titulo" className="form-label">
           Título
         </label>
-        <input id="titulo" className={`form-control ${errors.titulo ? 'is-invalid' : ''}`} {...register('titulo')} />
-        <ErroCampo mensagem={errors.titulo?.message} />
+        <input
+          id="titulo"
+          className={`form-control ${errors.titulo ? 'is-invalid' : ''}`}
+          {...ariaErro('titulo', errors.titulo)}
+          {...register('titulo')}
+        />
+        <ErroCampo id="titulo" mensagem={errors.titulo?.message} />
       </div>
       <div className="row g-3">
         <div className="col-md-6">
@@ -110,9 +115,10 @@ export function FormProjeto({
             id="dataFim"
             type="date"
             className={`form-control ${errors.dataFim ? 'is-invalid' : ''}`}
+            {...ariaErro('dataFim', errors.dataFim)}
             {...register('dataFim')}
           />
-          <ErroCampo mensagem={errors.dataFim?.message} />
+          <ErroCampo id="dataFim" mensagem={errors.dataFim?.message} />
         </div>
       </div>
       <div className="text-end mt-4">
@@ -125,6 +131,11 @@ export function FormProjeto({
 }
 
 const PASSOS = TOTAL_PASSOS;
+const FILTROS = [
+  { id: 'ATIVO', texto: 'Ativos' },
+  { id: 'ARQUIVADO', texto: 'Arquivados' },
+  { id: 'LIXEIRA', texto: 'Lixeira' },
+] as const;
 
 /** Painel de projetos (ERS 8.4): cards com status, progresso do protocolo e revisões */
 export function Projetos() {
@@ -151,88 +162,81 @@ export function Projetos() {
         </button>
       </Cabecalho>
 
-      <ul className="nav nav-pills mb-3" role="tablist">
-        {(['ATIVO', 'ARQUIVADO', 'LIXEIRA'] as const).map((f) => (
-          <li className="nav-item" key={f}>
-            <button
-              className={`nav-link ${filtro === f ? 'active' : ''}`}
-              role="tab"
-              aria-selected={filtro === f}
-              onClick={() => setFiltro(f)}
-            >
-              {f === 'ATIVO' ? 'Ativos' : f === 'ARQUIVADO' ? 'Arquivados' : 'Lixeira'}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <Abas
+        abas={FILTROS}
+        atual={filtro}
+        aoMudar={setFiltro}
+        rotulo="Situação dos projetos"
+        className="nav nav-pills mb-3"
+      >
+        {lista.isLoading && <Carregando />}
+        <ErroAlerta erro={lista.error ?? restaurar.error} />
+        {lista.data?.length === 0 && (
+          <Vazio icone="bi-folder2">
+            {filtro === 'LIXEIRA'
+              ? 'A lixeira está vazia. Projetos excluídos ficam aqui por 30 dias.'
+              : 'Nenhum projeto aqui ainda.'}
+          </Vazio>
+        )}
 
-      {lista.isLoading && <Carregando />}
-      <ErroAlerta erro={lista.error ?? restaurar.error} />
-      {lista.data?.length === 0 && (
-        <Vazio icone="bi-folder2">
-          {filtro === 'LIXEIRA'
-            ? 'A lixeira está vazia. Projetos excluídos ficam aqui por 30 dias.'
-            : 'Nenhum projeto aqui ainda.'}
-        </Vazio>
-      )}
-
-      <div className="row g-3">
-        {lista.data?.map((p) => {
-          const passo = p.protocoloStatus === 'RASCUNHO' ? (p.protocoloPasso ?? 1) - 1 : PASSOS;
-          return (
-            <div className="col-md-6 col-xl-4" key={p.id}>
-              <div className="card h-100">
-                <div className="card-body d-flex flex-column">
-                  <div className="d-flex justify-content-between gap-2 mb-2">
-                    <span className="badge text-bg-light border">{rotulo(p.papel)}</span>
-                    <Situacao valor={p.protocoloStatus} texto={`Protocolo: ${rotulo(p.protocoloStatus)}`} />
-                  </div>
-                  <h2 className="h5">
-                    {filtro === 'LIXEIRA' ? (
-                      p.titulo
-                    ) : (
-                      <Link to={`/projetos/${p.id}`} className="stretched-link text-reset text-decoration-none">
-                        {p.titulo}
-                      </Link>
-                    )}
-                  </h2>
-                  <div className="small text-secondary mb-3">
-                    {[p.area, p.instituicao].filter(Boolean).join(' · ') || 'Sem área definida'}
-                  </div>
-                  <div className="mt-auto">
-                    <div className="d-flex justify-content-between small mb-1">
-                      <span>Protocolo</span>
-                      <span>
-                        {Math.max(0, passo)}/{PASSOS} passos
-                      </span>
+        <div className="row g-3">
+          {lista.data?.map((p) => {
+            const passo = p.protocoloStatus === 'RASCUNHO' ? (p.protocoloPasso ?? 1) - 1 : PASSOS;
+            return (
+              <div className="col-md-6 col-xl-4" key={p.id}>
+                <div className="card h-100">
+                  <div className="card-body d-flex flex-column">
+                    <div className="d-flex justify-content-between gap-2 mb-2">
+                      <span className="badge text-bg-light border">{rotulo(p.papel)}</span>
+                      <Situacao valor={p.protocoloStatus} texto={`Protocolo: ${rotulo(p.protocoloStatus)}`} />
                     </div>
-                    <div className="progress mb-2" style={{ height: 6 }} aria-hidden="true">
-                      <div className="progress-bar" style={{ width: `${(Math.max(0, passo) / PASSOS) * 100}%` }} />
+                    <h2 className="h5">
+                      {filtro === 'LIXEIRA' ? (
+                        p.titulo
+                      ) : (
+                        <Link to={`/projetos/${p.id}`} className="stretched-link text-reset text-decoration-none">
+                          {p.titulo}
+                        </Link>
+                      )}
+                    </h2>
+                    <div className="small text-secondary mb-3">
+                      {[p.area, p.instituicao].filter(Boolean).join(' · ') || 'Sem área definida'}
                     </div>
-                    <div className="d-flex justify-content-between small text-secondary">
-                      <span>
-                        <i className="bi bi-journal-text me-1" aria-hidden="true" />
-                        {p.revisoes ?? 0} revisão(ões)
-                      </span>
-                      <span>Atualizado em {data(p.atualizadoEm)}</span>
+                    <div className="mt-auto">
+                      <div className="d-flex justify-content-between small mb-1">
+                        <span>Protocolo</span>
+                        <span>
+                          {Math.max(0, passo)}/{PASSOS} passos
+                        </span>
+                      </div>
+                      <div className="progress mb-2" style={{ height: 6 }} aria-hidden="true">
+                        <div className="progress-bar" style={{ width: `${(Math.max(0, passo) / PASSOS) * 100}%` }} />
+                      </div>
+                      <div className="d-flex justify-content-between small text-secondary">
+                        <span>
+                          <i className="bi bi-journal-text me-1" aria-hidden="true" />
+                          {p.revisoes ?? 0} revisão(ões)
+                        </span>
+                        <span>Atualizado em {data(p.atualizadoEm)}</span>
+                      </div>
+                      {filtro === 'LIXEIRA' && (
+                        <button
+                          className="btn btn-outline-primary btn-sm mt-3"
+                          disabled={restaurar.isPending}
+                          onClick={() => restaurar.mutate(p.id)}
+                        >
+                          <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true" />
+                          Restaurar
+                        </button>
+                      )}
                     </div>
-                    {filtro === 'LIXEIRA' && (
-                      <button
-                        className="btn btn-outline-primary btn-sm mt-3"
-                        disabled={restaurar.isPending}
-                        onClick={() => restaurar.mutate(p.id)}
-                      >
-                        <i className="bi bi-arrow-counterclockwise me-1" aria-hidden="true" />
-                        Restaurar
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </Abas>
 
       <Modal titulo="Novo projeto" aberto={novo} aoFechar={() => setNovo(false)} tamanho="lg">
         <FormProjeto

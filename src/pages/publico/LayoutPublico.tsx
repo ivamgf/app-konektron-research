@@ -35,7 +35,7 @@ export function LayoutPublico({ children }: { children: ReactNode }) {
           )}
         </nav>
       </header>
-      <main id="conteudo" className="k-pub-main">
+      <main id="conteudo" tabIndex={-1} className="k-pub-main">
         {children}
       </main>
       <RodapePublico />
@@ -52,6 +52,7 @@ function RodapePublico() {
             <p className="mb-2">
               <a href={`https://${SITE_ORKNEYTECH}`} target="_blank" rel="noopener noreferrer">
                 {SITE_ORKNEYTECH}
+                <span className="visually-hidden"> (abre em nova aba)</span>
               </a>
             </p>
             <p className="mb-0">

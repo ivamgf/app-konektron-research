@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { del, get, lerErro, mensagemDeErro, patch, post, put } from '../../lib/api';
@@ -12,7 +12,17 @@ import type {
   ItemMatriz,
   Progresso,
 } from '../../lib/tipos';
-import { BotaoConfirmar, Carregando, ErroAlerta, IndicadorSalvo, Modal, Situacao, Vazio } from '../../components/ui';
+import {
+  Abas,
+  BotaoConfirmar,
+  Carregando,
+  ErroAlerta,
+  IndicadorSalvo,
+  Modal,
+  PainelAba,
+  Situacao,
+  Vazio,
+} from '../../components/ui';
 import { BotaoTarefa } from '../../components/BotaoTarefa';
 import { useProjetoAtual } from '../projeto/ProjetoLayout';
 import { abrirPdf } from '../projeto/Documentos';
@@ -236,6 +246,7 @@ function DocumentoEmAnalise({
   const [salvoEm, setSalvoEm] = useState<string | null>(null);
   const [erroPdf, setErroPdf] = useState<unknown>(null);
   const carregado = useRef(false);
+  const idAbas = useId();
 
   // preenche com o que veio da API e, por cima, o que ficou pendente offline
   useEffect(() => {
@@ -343,6 +354,7 @@ function DocumentoEmAnalise({
               rel="noreferrer"
             >
               {doc.doi}
+              <span className="visually-hidden"> (abre em nova aba)</span>
             </a>
           )}
         </div>
@@ -354,10 +366,12 @@ function DocumentoEmAnalise({
           </details>
         )}
         {estado === 'erro' && <ErroAlerta erro="Não foi possível salvar. A próxima alteração tenta de novo." />}
-        <ul className="nav nav-tabs mt-2">
-          {ABAS.map(([id, texto]) => (
-            <li className="nav-item" key={id}>
-              <button className={`nav-link ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>
+        <Abas
+          idBase={idAbas}
+          abas={ABAS.map(([id, texto]) => ({
+            id: id as string,
+            texto: (
+              <>
                 {texto}
                 {id === 'matriz' && d.matriz.length > 0 && (
                   <span className="badge text-bg-light border ms-1">{d.matriz.length}</span>
@@ -365,12 +379,16 @@ function DocumentoEmAnalise({
                 {id === 'discussao' && d.discussao.length > 0 && (
                   <span className="badge text-bg-light border ms-1">{d.discussao.length}</span>
                 )}
-              </button>
-            </li>
-          ))}
-        </ul>
+              </>
+            ),
+          }))}
+          atual={aba}
+          aoMudar={setAba}
+          rotulo="Seções da análise do documento"
+          className="nav nav-tabs mt-2"
+        />
       </div>
-      <div className="card-body">
+      <PainelAba idBase={idAbas} atual={aba} className="card-body">
         {aba === 'questoes' && (
           <fieldset disabled={!edita}>
             {(analise.questoes ?? []).length === 0 && (
@@ -447,7 +465,7 @@ function DocumentoEmAnalise({
             ))}
           </fieldset>
         )}
-      </div>
+      </PainelAba>
     </div>
   );
 }

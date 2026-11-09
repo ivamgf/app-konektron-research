@@ -5,9 +5,9 @@
  */
 
 export const IDIOMAS_SITE = [
-  { codigo: 'pt', nome: 'Português', curto: 'PT' },
-  { codigo: 'en', nome: 'English', curto: 'EN' },
-  { codigo: 'es', nome: 'Español', curto: 'ES' },
+  { codigo: 'pt', nome: 'Português', curto: 'PT', lang: 'pt-BR' },
+  { codigo: 'en', nome: 'English', curto: 'EN', lang: 'en' },
+  { codigo: 'es', nome: 'Español', curto: 'ES', lang: 'es' },
 ] as const;
 export type IdiomaSite = (typeof IDIOMAS_SITE)[number]['codigo'];
 

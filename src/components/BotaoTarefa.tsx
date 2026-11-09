@@ -120,6 +120,7 @@ export function LinksDoArquivo({ url, pdf, texto, nome }: { url: string; pdf: bo
       <a className="btn btn-success" href={url} target="_blank" rel="noreferrer">
         <i className="bi bi-eye me-1" aria-hidden="true" />
         {texto}
+        <span className="visually-hidden"> (abre em nova aba)</span>
       </a>
       <button type="button" className="btn btn-outline-success" onClick={() => imprimirPdf(url)}>
         <i className="bi bi-printer me-1" aria-hidden="true" />

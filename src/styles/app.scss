@@ -123,12 +123,24 @@ $body-color-dark: #e6e6e6;
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 1040;
+    overflow-y: auto;
     transform: translateX(-100%);
-    transition: transform 0.2s;
+    // fechado, o menu sai da ordem do Tab e do leitor de tela (WCAG 2.4.3 / 2.4.11)
+    visibility: hidden;
+    transition:
+      transform 0.2s,
+      visibility 0.2s;
     &.aberta {
       transform: none;
+      visibility: visible;
     }
   }
+}
+.k-sidebar-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 1039;
+  background: rgba(#000, 0.4);
 }
 .k-main {
   flex: 1;
@@ -617,4 +629,69 @@ body {
 font.goog-text-highlight {
   background: none !important;
   box-shadow: none !important;
+}
+
+// ---------------------------------------------------------------- acessibilidade (WCAG 2.2)
+// 2.4.7 / 2.4.13: indicador de foco visível e com contraste em todos os controles
+:root {
+  --k-foco: #0a58ca;
+}
+[data-bs-theme='dark'] {
+  --k-foco: #6ea8fe;
+}
+.k-home-hero,
+.k-home-passos,
+.k-home-cta,
+.k-pub-footer {
+  --k-foco: #fff;
+}
+:focus-visible {
+  outline: 3px solid var(--k-foco);
+  outline-offset: 2px;
+}
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible {
+  outline-offset: 0;
+}
+// destino do "Pular para o conteúdo": recebe o foco sem desenhar moldura em toda a área
+main[tabindex='-1']:focus {
+  outline: none;
+}
+// o link de pular fica por cima do cabeçalho fixo
+.visually-hidden-focusable:focus,
+.visually-hidden-focusable:focus-within {
+  z-index: 1100;
+  background: var(--bs-body-bg);
+}
+
+// 2.3.3 / preferências do sistema: sem animações e transições para quem pediu menos movimento
+@media (prefers-reduced-motion: reduce) {
+  *:not(.spinner-border):not(.spinner-grow),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// 1.4.11 / modo de alto contraste do Windows: mantém bordas e foco visíveis
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight;
+  }
+  .badge,
+  .btn,
+  .nav-link.active {
+    border: 1px solid ButtonText;
+  }
+}
+
+// VLibras (gov.br): tradução para Libras só faz sentido com a interface em português
+html:not([lang^='pt']) [vw],
+html:not([lang^='pt']) #vlibras-access-wrapper,
+html:not([lang^='pt']) #vlibras-app-root {
+  display: none !important;
 }
