@@ -62,10 +62,32 @@ describe('assistente do protocolo', () => {
     expect(corpoDoPasso(4, r, 5)).toEqual({ passoAtual: 5, objetivoGeral: 'x', objetivos: [{ texto: 'a' }] });
     expect(corpoDoPasso(8, { ...vazio, descritores: [{ termo: 'Água', vocabulario: 'DECS', codigo: '' }] }, 9)).toEqual(
       {
-        passoAtual: 8, // a API aceita só 1 a 8
+        passoAtual: 9,
         descritores: [{ termo: 'Água', vocabulario: 'DECS', codigo: null }],
       },
     );
+  });
+  it('passo 9 envia a metodologia (o nome só quando é "Outra") e o 10 riscos, benefícios e resultados', () => {
+    expect(
+      corpoDoPasso(9, { ...vazio, metodologiaTipo: 'DSR', metodologiaOutro: 'x', metodologia: 'Ciclos' }, 10),
+    ).toEqual({
+      passoAtual: 10,
+      metodologiaTipo: 'DSR',
+      metodologiaOutro: null,
+      metodologia: 'Ciclos',
+    });
+    expect(corpoDoPasso(9, { ...vazio, metodologiaTipo: 'OUTRA', metodologiaOutro: 'Netnografia' }, 10)).toMatchObject({
+      metodologiaTipo: 'OUTRA',
+      metodologiaOutro: 'Netnografia',
+    });
+    expect(corpoDoPasso(10, { ...vazio, resultadosEsperados: 'Um framework', riscos: '  ' }, 11)).toEqual({
+      passoAtual: 10, // a API aceita só 1 a 10
+      riscos: null,
+      beneficios: null,
+      resultadosEsperados: 'Um framework',
+    });
+    expect(passosPreenchidos({ ...vazio, metodologiaTipo: 'OUTRA' })[9]).toBe(false);
+    expect(passosPreenchidos({ ...vazio, resultadosEsperados: 'x' })[10]).toBe(true);
   });
   it('marca como preenchido o passo 6 só com 3 palavras-chave (RN02)', () => {
     const duas = {

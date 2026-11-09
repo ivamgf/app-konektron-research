@@ -17,11 +17,14 @@ import { DocumentosDaRevisao } from './DocumentosDaRevisao';
 import { Duplicados } from './Duplicados';
 import { aceitaImportacao, EditarEtapa, ImportarCsvEtapa } from './AcoesEtapa';
 import { ImportacaoTriagem } from './ImportacaoTriagem';
+import { DiagramaFluxo } from './DiagramaFluxo';
+import { RegistroDaRevisao } from './RegistroDaRevisao';
 
 const ABAS = [
   { id: 'etapas', texto: 'Etapas', icone: 'bi-signpost-split' },
   { id: 'importar', texto: 'Importar triagem', icone: 'bi-filetype-csv' },
   { id: 'painel', texto: 'Painel de etapas', icone: 'bi-bar-chart' },
+  { id: 'diagrama', texto: 'Diagrama de fluxo', icone: 'bi-diagram-3' },
   { id: 'checklist', texto: 'Checklist de relato', icone: 'bi-list-check' },
   { id: 'documentos', texto: 'Documentos', icone: 'bi-files' },
 ] as const;
@@ -93,8 +96,10 @@ export default function Revisao() {
       {aba === 'etapas' && <Etapas revisao={r} />}
       {aba === 'importar' && <ImportacaoTriagem revisao={r} />}
       {aba === 'painel' && <Painel revisao={r} />}
+      {aba === 'diagrama' && <DiagramaFluxo revisaoId={r.id} />}
       {aba === 'checklist' && <Checklist revisaoId={r.id} />}
       {aba === 'documentos' && <DocumentosDaRevisao revisaoId={r.id} />}
+      <RegistroDaRevisao revisao={r} />
     </>
   );
 }

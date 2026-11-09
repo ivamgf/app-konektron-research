@@ -41,7 +41,7 @@ export function Inclusao({ revisaoId, etapa }: { revisaoId: string; etapa: Etapa
     <div className="row g-4">
       <div className="col-xl-7">
         <h4 className="h6">Incluídos nesta revisão</h4>
-        <DocumentosDaRevisao revisaoId={revisaoId} situacaoFixa="INCLUIDO" />
+        <DocumentosDaRevisao revisaoId={revisaoId} situacaoFixa="INCLUIDO" acoes />
         {etapa.status === 'EM_ANDAMENTO' && (
           <p className="small text-secondary mt-2">
             Ao concluir esta etapa, os selecionados na última triagem também passam a incluídos.

@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api, get } from '../../lib/api';
+import { get } from '../../lib/api';
 import { rotulo } from '../../lib/formato';
 import { Carregando, ErroAlerta } from '../../components/ui';
 import type { Revisao } from '../../lib/tipos';
 import { DadosDaRevisao } from './DadosDaRevisao';
+import { DiagramaFluxo } from './DiagramaFluxo';
 
 type LinhaEtapa = {
   revisaoEtapaId: string;
@@ -98,7 +98,7 @@ export function Painel({ revisao }: { revisao: Revisao }) {
       </p>
 
       <div className="row g-4">
-        <div className="col-xl-7">
+        <div className="col-12">
           <h3 className="h6">Consultados por base</h3>
           <table className="table table-sm small">
             <thead>
@@ -196,83 +196,9 @@ export function Painel({ revisao }: { revisao: Revisao }) {
             </>
           )}
         </div>
-        <div className="col-xl-5">
-          <Fluxograma revisaoId={revisaoId} />
+        <div className="col-12">
+          <DiagramaFluxo revisaoId={revisaoId} compacto />
         </div>
-      </div>
-    </div>
-  );
-}
-
-function baixar(url: string, nome: string) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nome;
-  a.click();
-}
-
-/** O SVG vem da API com autenticação; vira data URL para exibir e exportar */
-function Fluxograma({ revisaoId }: { revisaoId: string }) {
-  const svg = useQuery({
-    queryKey: ['revisao', revisaoId, 'fluxograma'],
-    queryFn: () =>
-      api
-        .get<string>(`/revisoes/${revisaoId}/fluxograma`, { params: { formato: 'svg' }, responseType: 'text' })
-        .then((r) => r.data),
-  });
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!svg.data) return;
-    const u = URL.createObjectURL(new Blob([svg.data], { type: 'image/svg+xml' }));
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [svg.data]);
-
-  const exportarPng = () => {
-    if (!url) return;
-    const img = new Image();
-    img.onload = () => {
-      const escala = 2;
-      const c = document.createElement('canvas');
-      c.width = img.naturalWidth * escala;
-      c.height = img.naturalHeight * escala;
-      const ctx = c.getContext('2d')!;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, c.width, c.height);
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      baixar(c.toDataURL('image/png'), 'fluxograma.png');
-    };
-    img.src = url;
-  };
-
-  return (
-    <div className="card">
-      <div className="card-body">
-        <div className="d-flex align-items-center mb-2">
-          <h3 className="h6 mb-0 me-auto">Fluxo de seleção</h3>
-          <div className="btn-group btn-group-sm">
-            <button
-              className="btn btn-outline-secondary"
-              disabled={!url}
-              onClick={() => url && baixar(url, 'fluxograma.svg')}
-            >
-              SVG
-            </button>
-            <button className="btn btn-outline-secondary" disabled={!url} onClick={exportarPng}>
-              PNG
-            </button>
-          </div>
-        </div>
-        {svg.isLoading && <Carregando />}
-        <ErroAlerta erro={svg.error} />
-        {url && (
-          <div className="k-fluxograma">
-            <img
-              src={url}
-              alt="Fluxograma de seleção: identificação, triagem, elegibilidade e inclusão, com as contagens"
-            />
-          </div>
-        )}
       </div>
     </div>
   );

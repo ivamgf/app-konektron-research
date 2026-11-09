@@ -20,6 +20,7 @@ const ABAS = [
   { para: 'questoes', texto: 'Questões', icone: 'bi-question-circle' },
   { para: 'criterios', texto: 'Critérios', icone: 'bi-funnel' },
   { para: 'documentos', texto: 'Documentos', icone: 'bi-file-earmark-text' },
+  { para: 'referencias', texto: 'Referências', icone: 'bi-bookmarks' },
   { para: 'revisoes', texto: 'Revisões', icone: 'bi-journal-text' },
   { para: 'analises', texto: 'Análises', icone: 'bi-clipboard-data' },
   { para: 'membros', texto: 'Membros', icone: 'bi-people' },

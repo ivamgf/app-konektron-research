@@ -1,6 +1,6 @@
 import type { CampoBusca, Protocolo } from '../../lib/tipos';
 
-// RF07: os 8 passos do assistente
+// RF07: os passos do assistente (9 e 10 acrescentados depois: metodologia; riscos, benefícios e resultados)
 export const PASSOS = [
   { n: 1, titulo: 'Tema e questão' },
   { n: 2, titulo: 'Outras questões' },
@@ -10,7 +10,38 @@ export const PASSOS = [
   { n: 6, titulo: 'Palavras-chave' },
   { n: 7, titulo: 'Strings de busca' },
   { n: 8, titulo: 'Descritores' },
+  { n: 9, titulo: 'Metodologia' },
+  { n: 10, titulo: 'Riscos, benefícios e resultados' },
 ] as const;
+export const TOTAL_PASSOS = PASSOS.length;
+
+/** Tipos de metodologia (mesmos códigos da API) */
+export const METODOLOGIAS: [string, string][] = [
+  ['DSR', 'Design Science Research (DSR)'],
+  ['QUANTITATIVA', 'Pesquisa quantitativa'],
+  ['QUALITATIVA', 'Pesquisa qualitativa'],
+  ['MISTA', 'Métodos mistos (quali-quantitativa)'],
+  ['REVISAO_SISTEMATICA', 'Revisão sistemática da literatura'],
+  ['REVISAO_INTEGRATIVA', 'Revisão integrativa'],
+  ['REVISAO_ESCOPO', 'Revisão de escopo (scoping review)'],
+  ['REVISAO_NARRATIVA', 'Revisão narrativa'],
+  ['BIBLIOMETRIA', 'Estudo bibliométrico'],
+  ['ESTUDO_CASO', 'Estudo de caso'],
+  ['PESQUISA_ACAO', 'Pesquisa-ação'],
+  ['EXPERIMENTAL', 'Pesquisa experimental'],
+  ['QUASE_EXPERIMENTAL', 'Pesquisa quase-experimental'],
+  ['SURVEY', 'Levantamento (survey)'],
+  ['ETNOGRAFIA', 'Etnografia'],
+  ['TEORIA_FUNDAMENTADA', 'Teoria fundamentada (grounded theory)'],
+  ['FENOMENOLOGIA', 'Pesquisa fenomenológica'],
+  ['DOCUMENTAL', 'Pesquisa documental'],
+  ['BIBLIOGRAFICA', 'Pesquisa bibliográfica'],
+  ['EXPLORATORIA', 'Pesquisa exploratória'],
+  ['DESCRITIVA', 'Pesquisa descritiva'],
+  ['EXPLICATIVA', 'Pesquisa explicativa'],
+  ['DELPHI', 'Método Delphi'],
+  ['OUTRA', 'Outra'],
+];
 
 export type Rascunho = {
   tema: string;
@@ -23,6 +54,12 @@ export type Rascunho = {
   palavrasChave: { termo: string; idiomaId: number | null }[];
   strings: { baseDadosId: string | null; campo: CampoBusca; expressao: string }[];
   descritores: { termo: string; vocabulario: 'DECS' | 'MESH' | 'LIVRE'; codigo: string }[];
+  metodologiaTipo: string;
+  metodologiaOutro: string;
+  metodologia: string;
+  riscos: string;
+  beneficios: string;
+  resultadosEsperados: string;
 };
 
 export function rascunhoDe(p: Protocolo): Rascunho {
@@ -37,6 +74,12 @@ export function rascunhoDe(p: Protocolo): Rascunho {
     palavrasChave: p.palavrasChave.map((x) => ({ termo: x.termo, idiomaId: x.idiomaId })),
     strings: p.strings.map((x) => ({ baseDadosId: x.baseDadosId, campo: x.campo, expressao: x.expressao })),
     descritores: p.descritores.map((x) => ({ termo: x.termo, vocabulario: x.vocabulario, codigo: x.codigo ?? '' })),
+    metodologiaTipo: p.metodologiaTipo ?? '',
+    metodologiaOutro: p.metodologiaOutro ?? '',
+    metodologia: p.metodologia ?? '',
+    riscos: p.riscos ?? '',
+    beneficios: p.beneficios ?? '',
+    resultadosEsperados: p.resultadosEsperados ?? '',
   };
 }
 
@@ -47,7 +90,7 @@ const texto = (v: string) => (v.trim() ? v : null);
  * Itens de lista em branco são descartados (a API exige texto em cada item).
  */
 export function corpoDoPasso(passo: number, r: Rascunho, proximoPasso: number) {
-  const base = { passoAtual: Math.min(8, Math.max(1, proximoPasso)) };
+  const base = { passoAtual: Math.min(TOTAL_PASSOS, Math.max(1, proximoPasso)) };
   switch (passo) {
     case 1:
       return { ...base, tema: texto(r.tema), questaoPesquisa: texto(r.questaoPesquisa) };
@@ -68,6 +111,20 @@ export function corpoDoPasso(passo: number, r: Rascunho, proximoPasso: number) {
         ...base,
         descritores: r.descritores.filter((x) => x.termo.trim()).map((x) => ({ ...x, codigo: texto(x.codigo) })),
       };
+    case 9:
+      return {
+        ...base,
+        metodologiaTipo: r.metodologiaTipo || null,
+        metodologiaOutro: r.metodologiaTipo === 'OUTRA' ? texto(r.metodologiaOutro) : null,
+        metodologia: texto(r.metodologia),
+      };
+    case 10:
+      return {
+        ...base,
+        riscos: texto(r.riscos),
+        beneficios: texto(r.beneficios),
+        resultadosEsperados: texto(r.resultadosEsperados),
+      };
     default:
       return base;
   }
@@ -84,5 +141,7 @@ export function passosPreenchidos(r: Rascunho): Record<number, boolean> {
     6: r.palavrasChave.filter((x) => x.termo.trim()).length >= 3,
     7: r.strings.some((x) => x.expressao.trim()),
     8: r.descritores.some((x) => x.termo.trim()),
+    9: !!r.metodologiaTipo && (r.metodologiaTipo !== 'OUTRA' || !!r.metodologiaOutro.trim()),
+    10: !!r.resultadosEsperados.trim(),
   };
 }

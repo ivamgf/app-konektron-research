@@ -17,6 +17,7 @@ const Protocolo = lazy(() => import('./pages/projeto/Protocolo'));
 const Questoes = lazy(() => import('./pages/projeto/Questoes'));
 const Criterios = lazy(() => import('./pages/projeto/Criterios'));
 const Documentos = lazy(() => import('./pages/projeto/Documentos'));
+const Referencias = lazy(() => import('./pages/projeto/Referencias'));
 const Revisoes = lazy(() => import('./pages/projeto/Revisoes'));
 const Analises = lazy(() => import('./pages/projeto/Analises'));
 const Membros = lazy(() => import('./pages/projeto/Membros'));
@@ -53,6 +54,7 @@ export function App() {
             <Route path="questoes" element={<Questoes />} />
             <Route path="criterios" element={<Criterios />} />
             <Route path="documentos" element={<Documentos />} />
+            <Route path="referencias" element={<Referencias />} />
             <Route path="revisoes" element={<Revisoes />} />
             <Route path="revisoes/:revisaoId" element={<Revisao />} />
             <Route path="analises" element={<Analises />} />
