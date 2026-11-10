@@ -6,6 +6,7 @@ import { get } from '../lib/api';
 import type { Notificacao } from '../lib/tipos';
 import { Carregando } from './ui';
 import { SeletorIdioma } from './SeletorIdioma';
+import { LinkAcessibilidade } from './Acessibilidade';
 
 export function Marca({ grande = false }: { grande?: boolean }) {
   return (
@@ -110,6 +111,7 @@ export function Layout() {
       <a href="#conteudo" className="visually-hidden-focusable position-absolute p-2">
         Pular para o conteúdo
       </a>
+      <LinkAcessibilidade />
       {menuAberto && (
         <div className="k-sidebar-fundo d-md-none" aria-hidden="true" onClick={() => setMenuAberto(false)} />
       )}

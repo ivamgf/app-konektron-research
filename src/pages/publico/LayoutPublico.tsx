@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { Marca, MarcaKonektron } from '../../components/Layout';
 import { SeletorIdioma } from '../../components/SeletorIdioma';
+import { LinkAcessibilidade } from '../../components/Acessibilidade';
 import { EMAIL_ORKNEYTECH, SITE_ORKNEYTECH } from '../../lib/contato';
 
 /** Páginas abertas (antes do login): cabeçalho com acesso e rodapé KoneKtron · OrkneyTech */
@@ -13,6 +14,7 @@ export function LayoutPublico({ children }: { children: ReactNode }) {
       <a href="#conteudo" className="visually-hidden-focusable position-absolute p-2">
         Pular para o conteúdo
       </a>
+      <LinkAcessibilidade />
       <header className="k-pub-header border-bottom bg-body">
         <nav className="container-xl px-3 d-flex align-items-center gap-3" aria-label="Navegação principal">
           <Link to="/" className="text-decoration-none text-reset me-auto">

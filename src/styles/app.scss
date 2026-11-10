@@ -255,6 +255,17 @@ $body-color-dark: #e6e6e6;
     border-left-color: var(--bs-primary);
   }
 }
+// triagem: similaridade com o tema acima do limiar (sugestão de seleção)
+.k-lista .list-group-item.k-similar {
+  border-right: 4px solid var(--bs-success);
+  &:not(.k-sugerido) {
+    background: var(--bs-success-bg-subtle);
+  }
+}
+// documentos: cadastro sem resumo ou palavras-chave
+.k-incompleto {
+  color: var(--bs-danger-text-emphasis) !important;
+}
 .k-fluxograma img {
   max-width: 100%;
   background: #fff;
@@ -702,4 +713,257 @@ html:not([lang^='pt']) [vw],
 html:not([lang^='pt']) #vlibras-access-wrapper,
 html:not([lang^='pt']) #vlibras-app-root {
   display: none !important;
+}
+
+// ---------------------------------------------------------------- painel de acessibilidade
+// botão fixo no canto inferior direito (o VLibras fica no meio da lateral direita)
+.k-a11y-botao {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1080;
+  width: 3.25rem;
+  height: 3.25rem;
+  padding: 0;
+  font-size: 1.6rem;
+  line-height: 1;
+  .k-a11y-ativos {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    font-size: 0.7rem;
+  }
+}
+.k-a11y-painel {
+  position: fixed;
+  right: 1rem;
+  bottom: 5rem;
+  z-index: 1080;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 6.5rem);
+  overflow-y: auto;
+  &[hidden] {
+    display: none;
+  }
+}
+@media print {
+  .k-a11y {
+    display: none !important;
+  }
+}
+
+// guia de leitura: escurece acima e abaixo da faixa que acompanha o ponteiro
+.k-guia-sombra,
+.k-guia-faixa {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 1070;
+  pointer-events: none;
+}
+.k-guia-sombra {
+  background: rgba(0, 0, 0, 0.45);
+}
+.k-guia-faixa {
+  height: 56px;
+  border-top: 3px solid #fe7d05;
+  border-bottom: 3px solid #fe7d05;
+}
+
+// 1.4.12 espaçamento do texto
+html[data-k-espacamento] body {
+  line-height: 1.8 !important;
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.16em !important;
+  p,
+  li,
+  dd {
+    margin-bottom: 1.5em;
+  }
+}
+
+// fonte mais aberta e legível (os ícones têm a própria fonte e não mudam)
+html[data-k-fonte-legivel] body,
+html[data-k-fonte-legivel] body :not(.bi):not(.k-mono):not(kbd):not(code) {
+  font-family: Verdana, Tahoma, 'Segoe UI', Arial, sans-serif !important;
+}
+
+// 1.4.1 links sublinhados
+html[data-k-sublinhar] a,
+html[data-k-sublinhar] .btn-link {
+  text-decoration: underline !important;
+  text-underline-offset: 0.2em;
+}
+
+// 2.4.13 foco reforçado
+html[data-k-foco] :focus-visible {
+  outline: 5px solid var(--k-foco) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 8px rgba(254, 125, 5, 0.6) !important;
+}
+
+// cursor grande (seta e mãozinha)
+html[data-k-cursor],
+html[data-k-cursor] * {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24'%3E%3Cpath d='M4 2l15 10.5-6.6 1.3 3.9 7.3-2.7 1.4-3.9-7.3L4 20z' fill='%23000' stroke='%23fff' stroke-width='1.5'/%3E%3C/svg%3E")
+      4 2,
+    auto !important;
+}
+html[data-k-cursor] :is(a, button, [role='button'], [role='tab'], [role='option'], label, select, summary) {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24'%3E%3Cpath d='M9 2.5a1.5 1.5 0 0 1 3 0V10h1V8.5a1.5 1.5 0 0 1 3 0V10h.5V9a1.5 1.5 0 0 1 3 0v6c0 4-2.5 7-6.5 7S6 19.5 4.5 17L2 12.5a1.5 1.5 0 0 1 2.6-1.5L7 13.5h2z' fill='%23000' stroke='%23fff' stroke-width='1.2'/%3E%3C/svg%3E")
+      12 2,
+    pointer !important;
+}
+html[data-k-cursor] :is(input:not([type='checkbox']):not([type='radio']), textarea) {
+  cursor: text !important;
+}
+
+// 2.3.3 sem animações, pedido no painel (o mesmo do prefers-reduced-motion)
+html[data-k-sem-animacao] *:not(.spinner-border):not(.spinner-grow),
+html[data-k-sem-animacao] *::before,
+html[data-k-sem-animacao] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+// 1.4.6 alto contraste: fundo preto, texto branco, links/foco/ativos em amarelo.
+// As cores de situação continuam distinguíveis (verde, vermelho e laranja claros sobre o preto).
+html[data-k-contraste] {
+  --k-foco: #ffff00;
+  --bs-body-bg: #000;
+  --bs-body-color: #fff;
+  --bs-secondary-color: #fff;
+  --bs-emphasis-color: #fff;
+  --bs-border-color: #fff;
+  --bs-link-color: #ffff00;
+  --bs-link-color-rgb: 255, 255, 0;
+  --bs-link-hover-color: #ffff00;
+  --bs-link-hover-color-rgb: 255, 255, 0;
+  color-scheme: dark;
+
+  body,
+  body *:not(svg):not(svg *):not(img) {
+    background-color: #000 !important;
+    color: #fff !important;
+    border-color: #fff !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  body
+    :is(
+      .card,
+      .alert,
+      .modal-content,
+      .dropdown-menu,
+      .list-group-item,
+      .table,
+      .k-a11y-painel,
+      .form-control,
+      .form-select,
+      .border
+    ) {
+    border: 1px solid #fff !important;
+  }
+  a,
+  a *,
+  .btn-link,
+  .nav-link,
+  .page-link {
+    color: #ffff00 !important;
+    text-decoration: underline !important;
+  }
+  .btn {
+    border: 2px solid #fff !important;
+  }
+  // ativo, selecionado e página atual: amarelo com texto preto
+  :is(.active, [aria-selected='true'], [aria-current='page'], [aria-pressed='true'], .btn-primary, .k-a11y-botao),
+  :is(.active, [aria-selected='true'], [aria-current='page'], [aria-pressed='true'], .btn-primary, .k-a11y-botao) * {
+    background-color: #ffff00 !important;
+    color: #000 !important;
+    border-color: #ffff00 !important;
+  }
+  // sem imagens de fundo, exceto os ícones dos controles (redesenhados em preto/branco/amarelo)
+  body *:not(.form-check-input):not(.form-select):not(.btn-close) {
+    background-image: none !important;
+  }
+  .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+  }
+  .form-check-input {
+    border: 2px solid #fff !important;
+  }
+  .form-check-input:checked {
+    background-color: #ffff00 !important;
+    border-color: #ffff00 !important;
+  }
+  .form-check-input:checked[type='checkbox'] {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e") !important;
+  }
+  .form-switch .form-check-input {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e") !important;
+  }
+  .form-switch .form-check-input:checked {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23000'/%3e%3c/svg%3e") !important;
+  }
+  .btn-close {
+    background-color: transparent !important;
+  }
+  .progress-bar {
+    background-color: #ffff00 !important;
+  }
+  .progress {
+    border: 1px solid #fff !important;
+  }
+  ::placeholder {
+    color: #ccc !important;
+    opacity: 1;
+  }
+  // cores de situação (não dependem só da cor: há texto e ícone junto)
+  :is(.text-success, .text-success-emphasis, .text-bg-success, .btn-success, .alert-success, .k-sugerido),
+  :is(.text-success, .text-success-emphasis, .text-bg-success, .btn-success, .alert-success) * {
+    color: #7dff7d !important;
+    border-color: #7dff7d !important;
+  }
+  :is(
+    .text-danger,
+    .text-danger-emphasis,
+    .text-bg-danger,
+    .btn-danger,
+    .btn-outline-danger,
+    .alert-danger,
+    .k-incompleto
+  ),
+  :is(.text-danger, .text-bg-danger, .btn-danger, .btn-outline-danger, .alert-danger, .k-incompleto) * {
+    color: #ff8f8f !important;
+    border-color: #ff8f8f !important;
+  }
+  :is(.text-warning, .text-warning-emphasis, .text-bg-warning, .btn-warning, .alert-warning),
+  :is(.text-bg-warning, .btn-warning, .alert-warning) * {
+    color: #ffc266 !important;
+    border-color: #ffc266 !important;
+  }
+  .k-lista .list-group-item.k-sugerido,
+  .k-lista .list-group-item.k-similar {
+    border-left: 4px solid #7dff7d !important;
+  }
+  .k-guia-sombra {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+  }
+  .k-guia-faixa {
+    background-color: transparent !important;
+    border-color: #ffff00 !important;
+  }
+  .k-a11y-botao .k-a11y-ativos {
+    background-color: #000 !important;
+    color: #ffff00 !important;
+    border: 2px solid #ffff00 !important;
+  }
+  .btn-close {
+    filter: invert(1);
+    opacity: 1;
+  }
 }

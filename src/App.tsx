@@ -12,6 +12,7 @@ import { NaoEncontrado } from './pages/NaoEncontrado';
 import { Inicio } from './pages/publico/Inicio';
 import { Cadastro } from './pages/publico/Cadastro';
 import { TituloDaPagina } from './components/TituloDaPagina';
+import { Acessibilidade } from './components/Acessibilidade';
 
 // Telas maiores carregadas sob demanda
 const Protocolo = lazy(() => import('./pages/projeto/Protocolo'));
@@ -76,6 +77,8 @@ export function App() {
           </Route>
         </Routes>
       </Suspense>
+      {/* depois do conteúdo na ordem do teclado; fica fixo no canto da tela */}
+      <Acessibilidade />
     </>
   );
 }

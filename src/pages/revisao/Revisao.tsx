@@ -19,6 +19,7 @@ import { aceitaImportacao, EditarEtapa, ImportarCsvEtapa } from './AcoesEtapa';
 import { ImportacaoTriagem } from './ImportacaoTriagem';
 import { DiagramaFluxo } from './DiagramaFluxo';
 import { RegistroDaRevisao } from './RegistroDaRevisao';
+import { erroOrdemDasFases } from './termosBusca';
 
 const ABAS = [
   { id: 'etapas', texto: 'Etapas', icone: 'bi-signpost-split' },
@@ -194,13 +195,17 @@ function PainelEtapa({ revisao, etapa, etapas }: { revisao: TRevisao; etapa: Eta
     mutationFn: (ids: string[]) => put(`/revisoes/${revisao.id}/etapas/ordem`, { ids }),
     onSuccess: recarregar,
   });
-  const mover = (d: number) => {
-    const ids = etapas.map((e) => e.id);
-    const i = ids.indexOf(etapa.id);
-    [ids[i], ids[i + d]] = [ids[i + d], ids[i]];
-    ordenar.mutate(ids);
-  };
   const i = etapas.findIndex((e) => e.id === etapa.id);
+  /** lista com a etapa trocada de lugar com a vizinha (d = -1 sobe, +1 desce) */
+  const trocada = (d: number) => {
+    const l = [...etapas];
+    [l[i], l[i + d]] = [l[i + d], l[i]];
+    return l;
+  };
+  const mover = (d: number) => ordenar.mutate(trocada(d).map((e) => e.id));
+  // F1 → F2 → F3: não deixa mover uma fase para antes de uma de número menor
+  const quebraFases = (d: number) =>
+    i + d >= 0 && i + d < etapas.length && !erroOrdemDasFases(etapas) && !!erroOrdemDasFases(trocada(d));
   const pendente = etapa.status === 'PENDENTE';
   const andamento = etapa.status === 'EM_ANDAMENTO';
   const fechada = etapa.status === 'CONCLUIDA' || etapa.status === 'DISPENSADA';
@@ -284,16 +289,21 @@ function PainelEtapa({ revisao, etapa, etapas }: { revisao: TRevisao; etapa: Eta
         {pendente && dono && (
           <div className="border rounded p-3 mb-3 bg-body-tertiary">
             <div className="small fw-medium mb-2">Ordem (só antes de iniciar, RF22)</div>
+            <div className="small text-secondary mb-2">As fases da triagem ficam sempre na sequência F1 → F2 → F3.</div>
             <div className="btn-group btn-group-sm">
               <button
                 className="btn btn-outline-secondary"
-                disabled={i === 0 || etapas[i - 1].status !== 'PENDENTE'}
+                disabled={i === 0 || etapas[i - 1].status !== 'PENDENTE' || quebraFases(-1)}
                 onClick={() => mover(-1)}
               >
                 <i className="bi bi-arrow-up me-1" aria-hidden="true" />
                 Mover para cima
               </button>
-              <button className="btn btn-outline-secondary" disabled={i === etapas.length - 1} onClick={() => mover(1)}>
+              <button
+                className="btn btn-outline-secondary"
+                disabled={i === etapas.length - 1 || quebraFases(1)}
+                onClick={() => mover(1)}
+              >
                 <i className="bi bi-arrow-down me-1" aria-hidden="true" />
                 Mover para baixo
               </button>
