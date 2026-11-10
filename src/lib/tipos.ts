@@ -226,6 +226,8 @@ export type DocumentoResumo = {
   doi: string | null;
   citacoes?: number | null;
   arquivoId: string | null;
+  /** link do artigo na web (vem na lista de documentos do projeto) */
+  link?: string | null;
   /** vêm na lista de documentos do projeto */
   resumo?: string | null;
   palavrasChave?: string | null;

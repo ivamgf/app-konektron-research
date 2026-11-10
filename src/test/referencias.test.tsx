@@ -20,7 +20,7 @@ vi.mock('../lib/api', async (original) => ({ ...(await original<typeof import('.
 vi.mock('../pages/projeto/ProjetoLayout', () => ({
   useProjetoAtual: () => ({ projeto: { id: 'p1' }, papel: 'RESPONSAVEL', edita: true, dono: true }),
 }));
-const { default: Referencias, listaDaNorma } = await import('../pages/projeto/Referencias');
+const { default: Referencias, listaDaNorma, textosParaExportar } = await import('../pages/projeto/Referencias');
 
 const montar = () =>
   render(
@@ -47,19 +47,35 @@ describe('Referências do projeto', () => {
     expect(await screen.findByText(/3 referência\(s\) trazida\(s\)/)).toBeInTheDocument();
   });
 
-  it('nova referência exige ABNT ou APA', async () => {
+  it('nova referência exige pelo menos uma norma e aceita MLA', async () => {
     montar();
     await userEvent.click(await screen.findByRole('button', { name: /Nova referência/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/Informe a referência em ABNT, em APA/)).toBeInTheDocument();
+    expect(await screen.findByText(/Informe a referência em pelo menos uma norma/)).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('APA (7ª edição)'), 'Costa, C. (2021). Artigo.');
+    await userEvent.type(screen.getByLabelText('MLA (9ª edição)'), 'Costa, Carla. “Artigo.” 2021.');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() =>
       expect(post).toHaveBeenCalledWith('/projetos/p1/referencias', {
         abnt: null,
         apa: 'Costa, C. (2021). Artigo.',
+        mla: 'Costa, Carla. “Artigo.” 2021.',
+        chicago: null,
+        vancouver: null,
+        ieee: null,
         observacao: null,
       }),
     );
+  });
+
+  it('rótulo ABNT NBR 6023, troca para MLA e numera IEEE na exportação', async () => {
+    montar();
+    expect(await screen.findByRole('button', { name: 'ABNT NBR 6023' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'MLA' }));
+    expect(await screen.findByRole('list', { name: /MLA \(9ª edição\)/ })).toBeInTheDocument();
+    expect(screen.getAllByText(/Sem texto em MLA/)).toHaveLength(2);
+    expect(textosParaExportar([{ ...refs[1], ieee: 'B. Almeida, “Livro,” 2019.' }], 'ieee')).toEqual([
+      '[1] B. Almeida, “Livro,” 2019.',
+    ]);
   });
 });
