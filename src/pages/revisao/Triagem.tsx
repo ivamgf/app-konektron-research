@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { get, mensagemDeErro, patch, post, put } from '../../lib/api';
-import { chaves, useIdiomas, useProtocolo } from '../../lib/consultas';
+import { chaves, useProtocolo } from '../../lib/consultas';
 import { dataHora, rotulo } from '../../lib/formato';
 import type { ContagensEtapa, DocumentoTriagem, EtapaRevisao, MotivoExclusao, Revisao } from '../../lib/tipos';
 import { Carregando, ErroAlerta, Situacao, Vazio } from '../../components/ui';
 import { useProjetoAtual } from '../projeto/ProjetoLayout';
 import { abrirPdf } from '../projeto/Documentos';
 import { chaveEtapas } from './Revisao';
-import { ehFase1ou2, gruposDoProtocolo, NOME_ONDE, verificarTermos, type ResultadoTermos } from './termosBusca';
+import { ehFase1ou2, expressoesDoProtocolo, NOME_ONDE, verificarTermos, type ResultadoTermos } from './termosBusca';
+import { faixaNota, perfilDoProtocolo, similaridades, type Similaridade } from './similaridade';
+import { formatarNota, lerLimiar, lerPerfilAjustado, NotaSimilaridade, PainelSimilaridade } from './PainelSimilaridade';
 import {
   corpoDecisao,
   pendenteParaMim,
@@ -102,16 +104,27 @@ function FormExclusao({
 }
 
 /** Quadro da verificação dos termos de busca no documento aberto */
-function ResumoTermos({ r, nomeGrupo }: { r: ResultadoTermos; nomeGrupo: (idioma: string) => string }) {
+function ResumoTermos({ r }: { r: ResultadoTermos }) {
+  const faltam = r.clausulas.filter((c) => !c.ok);
   return (
     <div className={`alert ${r.sugerido ? 'alert-success' : 'alert-light border'} small py-2`}>
       <div className="fw-medium mb-1">
         <i className={`bi ${r.sugerido ? 'bi-check2-circle' : 'bi-info-circle'} me-1`} aria-hidden="true" />
         {r.sugerido
-          ? 'Sugestão: incluir. Todos os termos da busca aparecem no documento.'
-          : `Faltam ${r.faltando.length} de ${r.grupo.termos.length} termos da busca.`}
-        <span className="text-secondary fw-normal"> ({nomeGrupo(r.grupo.idioma)})</span>
+          ? 'Sugestão: incluir. O documento atende à string de busca (título, resumo e palavras-chave).'
+          : `Não atende à string de busca: ${faltam.length} de ${r.clausulas.length} condição(ões) sem correspondência.`}
       </div>
+      <div className="k-mono text-secondary mb-1">{r.expressao.texto}</div>
+      <ul className="mb-1 ps-3" aria-label="Condições da string">
+        {r.clausulas.map((c, i) => (
+          <li key={i}>
+            <i className={`bi ${c.ok ? 'bi-check-lg text-success' : 'bi-x-lg text-danger'} me-1`} aria-hidden="true" />
+            {c.negada ? 'NOT ' : ''}
+            {c.texto}
+            <span className="visually-hidden">{c.ok ? ': atendida' : ': não atendida'}</span>
+          </li>
+        ))}
+      </ul>
       <ul className="mb-0 ps-3">
         {r.encontrados.map((t) => (
           <li key={t.termo}>
@@ -124,6 +137,41 @@ function ResumoTermos({ r, nomeGrupo }: { r: ResultadoTermos; nomeGrupo: (idioma
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/** Nota de similaridade do documento aberto, com a barra e os termos em comum com o protocolo */
+function SimilaridadeDoDocumento({ s, limiar }: { s: Similaridade; limiar: number }) {
+  const faixa = faixaNota(s.nota, limiar);
+  return (
+    <div className={`alert ${faixa === 'alta' ? 'alert-success' : 'alert-light border'} small py-2`}>
+      <div className="d-flex align-items-center gap-2">
+        <i className="bi bi-bullseye" aria-hidden="true" />
+        <span className="fw-medium">
+          Similaridade com o tema: {formatarNota(s.nota)}
+          {faixa === 'alta' ? ' — sugerido para seleção' : ''}
+        </span>
+        <div
+          className="progress flex-grow-1"
+          style={{ height: 6, maxWidth: 160 }}
+          role="meter"
+          aria-label="Similaridade"
+          aria-valuemin={0}
+          aria-valuemax={1}
+          aria-valuenow={Number(s.nota.toFixed(2))}
+        >
+          <div
+            className={`progress-bar ${faixa === 'alta' ? 'bg-success' : faixa === 'media' ? 'bg-success opacity-50' : 'bg-secondary'}`}
+            style={{ width: `${s.nota * 100}%` }}
+          />
+        </div>
+      </div>
+      {!!s.termosComuns.length && (
+        <div className="text-secondary mt-1">
+          Radicais em comum com o protocolo: <span className="k-mono">{s.termosComuns.join(', ')}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -151,29 +199,53 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
     queryKey: chaveEtapas(revisao.id),
     queryFn: () => get<EtapaRevisao[]>(`/revisoes/${revisao.id}/etapas`),
   });
-  const idiomas = useIdiomas();
   const verificar = ehFase1ou2(etapa, etapas.data);
-  const grupos = useMemo(() => (verificar ? gruposDoProtocolo(protocolo.data) : []), [verificar, protocolo.data]);
+  const expressoes = useMemo(
+    () => (verificar ? expressoesDoProtocolo(protocolo.data) : []),
+    [verificar, protocolo.data],
+  );
   const termos = useMemo(() => {
     const m = new Map<string, ResultadoTermos>();
     for (const d of todosDocs) {
-      const r = verificarTermos(d, grupos);
+      const r = verificarTermos(d, expressoes);
       if (r) m.set(d.revisaoDocumentoId, r);
     }
     return m;
-  }, [todosDocs, grupos]);
+  }, [todosDocs, expressoes]);
   const qtdSugeridos = [...termos.values()].filter((r) => r.sugerido).length;
   const [soSugeridos, setSoSugeridos] = useState(false);
-  const docs = useMemo(
-    () => (soSugeridos ? todosDocs.filter((d) => termos.get(d.revisaoDocumentoId)?.sugerido) : todosDocs),
-    [soSugeridos, todosDocs, termos],
-  );
-  const nomeGrupo = (idioma: string) =>
-    idioma === 'strings'
-      ? 'termos das strings'
-      : idioma === 'sem-idioma'
-        ? 'palavras-chave'
-        : `palavras-chave em ${idiomas.data?.find((i) => String(i.id) === idioma)?.nome.toLowerCase() ?? 'um idioma'}`;
+  // fases 1 e 2: similaridade (cosseno TF-IDF) de cada documento com o resumo do protocolo
+  const perfilAuto = useMemo(() => perfilDoProtocolo(protocolo.data), [protocolo.data]);
+  const [perfilAjustado, setPerfilAjustado] = useState(() => lerPerfilAjustado(projeto.id));
+  const [limiar, setLimiar] = useState(() => lerLimiar(projeto.id));
+  const [ordenarSim, setOrdenarSim] = useState(false);
+  const [soSimilares, setSoSimilares] = useState(false);
+  // o IDF usa todos os documentos da etapa, para a nota não mudar com o filtro
+  const corpus = useQuery({
+    queryKey: ['etapa', etapa.id, 'documentos', 'todos'],
+    queryFn: () => get<Resposta>(`/etapas/${etapa.id}/documentos`, { filtro: 'todos' }),
+    enabled: verificar,
+  });
+  const sims = useMemo(() => {
+    const m = new Map<string, Similaridade>();
+    if (!verificar) return m;
+    const base = corpus.data?.documentos.length ? corpus.data.documentos : todosDocs;
+    const r = similaridades(base, perfilAjustado ?? perfilAuto);
+    base.forEach((d, i) => m.set(d.revisaoDocumentoId, r[i]));
+    return m;
+  }, [verificar, corpus.data, todosDocs, perfilAjustado, perfilAuto]);
+  const temPerfil = perfilAuto.length > 0 || !!perfilAjustado?.trim();
+  const similar = (id: string) => temPerfil && (sims.get(id)?.nota ?? 0) >= limiar;
+  const qtdSimilares = temPerfil ? todosDocs.filter((d) => similar(d.revisaoDocumentoId)).length : 0;
+  const docs = useMemo(() => {
+    let l = soSugeridos ? todosDocs.filter((d) => termos.get(d.revisaoDocumentoId)?.sugerido) : todosDocs;
+    if (soSimilares && temPerfil) l = l.filter((d) => (sims.get(d.revisaoDocumentoId)?.nota ?? 0) >= limiar);
+    if (ordenarSim && temPerfil)
+      l = [...l].sort(
+        (a, b) => (sims.get(b.revisaoDocumentoId)?.nota ?? 0) - (sims.get(a.revisaoDocumentoId)?.nota ?? 0),
+      );
+    return l;
+  }, [soSugeridos, soSimilares, ordenarSim, temPerfil, todosDocs, termos, sims, limiar]);
   const completar = useMutation({
     mutationFn: (documentoId: string) =>
       post<{ preenchidos: string[]; fontes: string[] }>(`/documentos/${documentoId}/completar`),
@@ -478,14 +550,43 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                   </div>
                 )}
                 {verificar && (
+                  <PainelSimilaridade
+                    projetoId={projeto.id}
+                    etapaId={etapa.id}
+                    perfilAuto={perfilAuto}
+                    perfilAjustado={perfilAjustado}
+                    aoAjustarPerfil={setPerfilAjustado}
+                    limiar={limiar}
+                    aoMudarLimiar={setLimiar}
+                    total={todosDocs.length}
+                    acima={qtdSimilares}
+                    ordenar={ordenarSim}
+                    aoOrdenar={setOrdenarSim}
+                    soSimilares={soSimilares}
+                    aoSoSimilares={setSoSimilares}
+                    aoMarcar={
+                      podeDecidir
+                        ? () =>
+                            setMarcados(
+                              new Set(
+                                todosDocs
+                                  .filter((d) => similar(d.revisaoDocumentoId) && pendenteParaMim(d, dois))
+                                  .map((d) => d.revisaoDocumentoId),
+                              ),
+                            )
+                        : undefined
+                    }
+                  />
+                )}
+                {verificar && (
                   <div className="border rounded p-2 mb-2 small bg-body" role="status">
-                    {grupos.length ? (
+                    {expressoes.length ? (
                       <>
                         <div className="d-flex flex-wrap align-items-center gap-2">
                           <i className="bi bi-check2-circle text-success" aria-hidden="true" />
                           <span className="me-auto">
-                            <strong>{qtdSugeridos}</strong> de {todosDocs.length} com todos os termos da busca
-                            (sugeridos para incluir)
+                            <strong>{qtdSugeridos}</strong> de {todosDocs.length} atendem à string de busca (sugeridos
+                            para incluir)
                           </span>
                           {podeDecidir && qtdSugeridos > 0 && (
                             <button
@@ -520,11 +621,16 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                           </label>
                         </div>
                         <details className="mt-1">
-                          <summary>Termos verificados</summary>
+                          <summary>Strings verificadas</summary>
+                          <p className="text-secondary mb-1">
+                            Cada termo pode estar no título, no resumo ou nas palavras-chave. OR liga mais forte que AND
+                            (como na Scopus): <span className="k-mono">A AND B OR C</span> ={' '}
+                            <span className="k-mono">A AND (B OR C)</span>. Basta atender a uma das versões.
+                          </p>
                           <ul className="mb-0 ps-3">
-                            {grupos.map((g) => (
-                              <li key={g.idioma}>
-                                {nomeGrupo(g.idioma)}: {g.termos.join('; ')}
+                            {expressoes.map((x) => (
+                              <li key={x.texto} className="k-mono">
+                                {x.texto}
                               </li>
                             ))}
                           </ul>
@@ -542,7 +648,7 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                   {docs.map((d) => (
                     <div
                       key={d.revisaoDocumentoId}
-                      className={`list-group-item d-flex gap-2 align-items-start p-0 ${d.revisaoDocumentoId === atualId ? 'active' : ''} ${termos.get(d.revisaoDocumentoId)?.sugerido ? 'k-sugerido' : ''}`}
+                      className={`list-group-item d-flex gap-2 align-items-start p-0 ${d.revisaoDocumentoId === atualId ? 'active' : ''} ${termos.get(d.revisaoDocumentoId)?.sugerido ? 'k-sugerido' : ''} ${similar(d.revisaoDocumentoId) ? 'k-similar' : ''}`}
                     >
                       {podeDecidir && (
                         <input
@@ -587,6 +693,9 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                               <i className="bi bi-check2-circle me-1" aria-hidden="true" />
                               Sugerido
                             </span>
+                          )}
+                          {temPerfil && sims.get(d.revisaoDocumentoId) && (
+                            <NotaSimilaridade s={sims.get(d.revisaoDocumentoId)!} limiar={limiar} />
                           )}
                           <span className="small text-secondary ms-auto">{d.ano ?? ''}</span>
                         </div>
@@ -676,8 +785,11 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                           )}
                         </div>
                       )}
+                      {temPerfil && sims.get(atual.revisaoDocumentoId) && (
+                        <SimilaridadeDoDocumento s={sims.get(atual.revisaoDocumentoId)!} limiar={limiar} />
+                      )}
                       {termos.get(atual.revisaoDocumentoId) && (
-                        <ResumoTermos r={termos.get(atual.revisaoDocumentoId)!} nomeGrupo={nomeGrupo} />
+                        <ResumoTermos r={termos.get(atual.revisaoDocumentoId)!} />
                       )}
                     </div>
 

@@ -1,22 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import {
-  contemTermo,
-  ehFase1ou2,
-  gruposDoProtocolo,
-  normalizar,
-  termosDasStrings,
-  verificarTermos,
-} from '../pages/revisao/termosBusca';
+import { contemTermo, ehFase1ou2, normalizar, termosDasStrings } from '../pages/revisao/termosBusca';
 import { gravarConfigIA, lerConfigIA, lerJson, montarPedidoCampo, pedidoParaAssistente } from '../lib/ia';
 import { contextoDoProtocolo, rascunhoDoGerado } from '../pages/projeto/ProtocoloIA';
 import { rascunhoDe } from '../pages/projeto/protocoloPassos';
 import { BotaoIA } from '../components/IA';
 import type { EtapaRevisao, Protocolo } from '../lib/tipos';
-
-const pk = (termo: string, idiomaId: number | null) => ({ id: termo, termo, idiomaId });
-const str = (expressao: string) => ({ id: expressao, baseDadosId: null, campo: 'TODOS' as const, expressao, ordem: 1 });
 
 describe('verificação dos termos de busca na triagem', () => {
   it('normaliza acentos e pontuação e acha termos inteiros ou com curinga', () => {
@@ -30,44 +20,6 @@ describe('verificação dos termos de busca na triagem', () => {
       'ontology',
       'ontologies',
     ]);
-  });
-
-  it('sugere incluir quando os 3 termos aparecem, cada um no título, no resumo ou nas palavras-chave', () => {
-    const grupos = [{ idioma: '1', termos: ['ontologia', 'dados abertos', 'hidrologia'] }];
-    const r = verificarTermos(
-      {
-        titulo: 'Uma ontologia para recursos hídricos',
-        resumo: 'Propomos uma ontologia e usamos dados abertos.',
-        palavrasChave: 'ontologia; dados abertos; hidrologia',
-      },
-      grupos,
-    )!;
-    expect(r.sugerido).toBe(true);
-    expect(r.encontrados.find((e) => e.termo === 'ontologia')!.onde).toEqual(['titulo', 'resumo', 'palavrasChave']);
-    expect(r.encontrados.find((e) => e.termo === 'hidrologia')!.onde).toEqual(['palavrasChave']);
-
-    const falta = verificarTermos({ titulo: 'Ontologia', resumo: 'dados abertos', palavrasChave: null }, grupos)!;
-    expect(falta.sugerido).toBe(false);
-    expect(falta.faltando).toEqual(['hidrologia']);
-  });
-
-  it('agrupa por idioma: basta um idioma ter todos os termos', () => {
-    const grupos = gruposDoProtocolo({
-      palavrasChave: [pk('ontologia', 1), pk('dados abertos', 1), pk('ontology', 2), pk('open data', 2)],
-      strings: [str('("ontologia" OR "ontology") AND ("dados abertos" OR "open data")')],
-    } as Pick<Protocolo, 'palavrasChave' | 'strings'>);
-    expect(grupos).toHaveLength(2);
-    const r = verificarTermos({ titulo: 'An ontology for open data', resumo: null, palavrasChave: null }, grupos)!;
-    expect(r.sugerido).toBe(true);
-    expect(r.grupo.idioma).toBe('2');
-  });
-
-  it('usa só as palavras-chave que aparecem nas strings de busca', () => {
-    const grupos = gruposDoProtocolo({
-      palavrasChave: [pk('ontologia', 1), pk('semântica', 1)],
-      strings: [str('"ontologia" AND "água"')],
-    } as Pick<Protocolo, 'palavrasChave' | 'strings'>);
-    expect(grupos).toEqual([{ idioma: '1', termos: ['ontologia'] }]);
   });
 
   it('vale só nas duas primeiras etapas de triagem', () => {

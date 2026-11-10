@@ -87,49 +87,32 @@ export default function Documentos() {
         </Vazio>
       )}
       {!!lista.data?.itens.length && (
-        <div className="table-responsive">
-          <table className="table table-hover align-middle small">
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Autores</th>
-                <th>Ano</th>
-                <th>Periódico</th>
-                <th className="text-center">PDF</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lista.data.itens.map((d) => (
-                <tr key={d.id} className="cursor-pointer" onClick={() => setParams({ doc: d.id })}>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn-link p-0 text-start"
-                      onClick={() => setParams({ doc: d.id })}
-                    >
-                      {d.titulo}
-                    </button>
-                    {d.doi && <div className="k-mono text-secondary">{d.doi}</div>}
-                  </td>
-                  <td className="text-truncate" style={{ maxWidth: 220 }}>
-                    {d.autores ?? '—'}
-                  </td>
-                  <td>{d.ano ?? '—'}</td>
-                  <td className="text-truncate" style={{ maxWidth: 180 }}>
-                    {d.periodico ?? '—'}
-                  </td>
-                  <td className="text-center">
-                    {d.arquivoId ? (
-                      <i className="bi bi-file-earmark-pdf text-danger" role="img" aria-label="Com PDF" />
-                    ) : (
-                      '—'
-                    )}
-                  </td>
+        <>
+          <p className="small text-secondary mb-2">
+            <i className="bi bi-exclamation-circle text-danger me-1" aria-hidden="true" />
+            Títulos em <span className="k-incompleto fw-medium">vermelho</span>: cadastro incompleto (sem resumo ou sem
+            palavras-chave).
+          </p>
+          <div className="table-responsive">
+            <table className="table table-hover align-middle small">
+              <thead>
+                <tr>
+                  <th>Título</th>
+                  <th>Resumo e palavras-chave</th>
+                  <th>Autores</th>
+                  <th>Ano</th>
+                  <th>Periódico</th>
+                  <th className="text-center">PDF</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {lista.data.itens.map((d) => (
+                  <LinhaDocumento key={d.id} d={d} aoAbrir={() => setParams({ doc: d.id })} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
       {lista.data && (
         <Paginacao page={lista.data.page} pageSize={lista.data.pageSize} total={lista.data.total} aoMudar={setPage} />
@@ -160,6 +143,89 @@ export default function Documentos() {
           />
         )}
       </Modal>
+    </>
+  );
+}
+
+/** Cadastro incompleto: sem resumo ou sem palavras-chave */
+export const cadastroIncompleto = (d: Pick<DocumentoResumo, 'resumo' | 'palavrasChave'>) =>
+  !d.resumo?.trim() || !d.palavrasChave?.trim();
+
+/** Linha da lista: botões "Ver resumo" e "Ver palavras-chave" abrem o texto logo abaixo */
+function LinhaDocumento({ d, aoAbrir }: { d: DocumentoResumo; aoAbrir: () => void }) {
+  const [ver, setVer] = useState<'resumo' | 'palavrasChave' | null>(null);
+  const incompleto = cadastroIncompleto(d);
+  const temResumo = !!d.resumo?.trim();
+  const temPalavras = !!d.palavrasChave?.trim();
+  const alternar = (e: React.MouseEvent, qual: 'resumo' | 'palavrasChave') => {
+    e.stopPropagation();
+    setVer(ver === qual ? null : qual);
+  };
+  const idTexto = `doc-${d.id}-${ver ?? 'texto'}`;
+  return (
+    <>
+      <tr className="cursor-pointer" onClick={aoAbrir}>
+        <td>
+          <button
+            type="button"
+            className={`btn btn-link p-0 text-start ${incompleto ? 'k-incompleto' : ''}`}
+            onClick={(e) => (e.stopPropagation(), aoAbrir())}
+          >
+            {incompleto && <i className="bi bi-exclamation-circle me-1" aria-hidden="true" />}
+            {d.titulo}
+            {incompleto && <span className="visually-hidden"> (cadastro incompleto)</span>}
+          </button>
+          {d.doi && <div className="k-mono text-secondary">{d.doi}</div>}
+        </td>
+        <td style={{ minWidth: 200 }}>
+          <div className="d-flex flex-wrap gap-1">
+            {temResumo ? (
+              <button
+                type="button"
+                className={`btn btn-sm py-0 ${ver === 'resumo' ? 'btn-secondary' : 'btn-outline-secondary'}`}
+                aria-expanded={ver === 'resumo'}
+                aria-controls={ver === 'resumo' ? idTexto : undefined}
+                onClick={(e) => alternar(e, 'resumo')}
+              >
+                Ver resumo
+              </button>
+            ) : (
+              <span className="badge text-bg-danger">Sem resumo</span>
+            )}
+            {temPalavras ? (
+              <button
+                type="button"
+                className={`btn btn-sm py-0 ${ver === 'palavrasChave' ? 'btn-secondary' : 'btn-outline-secondary'}`}
+                aria-expanded={ver === 'palavrasChave'}
+                aria-controls={ver === 'palavrasChave' ? idTexto : undefined}
+                onClick={(e) => alternar(e, 'palavrasChave')}
+              >
+                Ver palavras-chave
+              </button>
+            ) : (
+              <span className="badge text-bg-danger">Sem palavras-chave</span>
+            )}
+          </div>
+        </td>
+        <td className="text-truncate" style={{ maxWidth: 220 }}>
+          {d.autores ?? '—'}
+        </td>
+        <td>{d.ano ?? '—'}</td>
+        <td className="text-truncate" style={{ maxWidth: 180 }}>
+          {d.periodico ?? '—'}
+        </td>
+        <td className="text-center">
+          {d.arquivoId ? <i className="bi bi-file-earmark-pdf text-danger" role="img" aria-label="Com PDF" /> : '—'}
+        </td>
+      </tr>
+      {ver && (
+        <tr className="table-light">
+          <td colSpan={6} id={idTexto}>
+            <div className="k-label text-secondary">{ver === 'resumo' ? 'Resumo' : 'Palavras-chave'}</div>
+            <p className="small k-leitura mb-0">{ver === 'resumo' ? d.resumo : d.palavrasChave}</p>
+          </td>
+        </tr>
+      )}
     </>
   );
 }
@@ -227,10 +293,22 @@ function DetalheDocumento({
               </>
             )}
           </div>
-          {doc.resumo && <p className="small k-leitura">{doc.resumo}</p>}
-          {doc.palavrasChave && (
+          {doc.resumo ? (
+            <p className="small k-leitura">{doc.resumo}</p>
+          ) : (
+            <p className="small k-incompleto fw-medium">
+              <i className="bi bi-exclamation-circle me-1" aria-hidden="true" />
+              Sem resumo (cadastro incompleto).
+            </p>
+          )}
+          {doc.palavrasChave ? (
             <p className="small">
               <strong>Palavras-chave:</strong> {doc.palavrasChave}
+            </p>
+          ) : (
+            <p className="small k-incompleto fw-medium">
+              <i className="bi bi-exclamation-circle me-1" aria-hidden="true" />
+              Sem palavras-chave (cadastro incompleto).
             </p>
           )}
           {!!doc.temas?.length && (

@@ -255,6 +255,17 @@ $body-color-dark: #e6e6e6;
     border-left-color: var(--bs-primary);
   }
 }
+// triagem: similaridade com o tema acima do limiar (sugestão de seleção)
+.k-lista .list-group-item.k-similar {
+  border-right: 4px solid var(--bs-success);
+  &:not(.k-sugerido) {
+    background: var(--bs-success-bg-subtle);
+  }
+}
+// documentos: cadastro sem resumo ou palavras-chave
+.k-incompleto {
+  color: var(--bs-danger-text-emphasis) !important;
+}
 .k-fluxograma img {
   max-width: 100%;
   background: #fff;
