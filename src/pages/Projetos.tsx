@@ -16,6 +16,7 @@ import { TOTAL_PASSOS } from './projeto/protocoloPassos';
 export const projetoSchema = z
   .object({
     titulo: z.string().trim().min(3, 'Mínimo de 3 caracteres').max(300),
+    subtitulo: z.string().trim().max(300).optional(),
     area: z.string().trim().max(150).optional(),
     instituicao: z.string().trim().max(200).optional(),
     programa: z.string().trim().max(200).optional(),
@@ -50,6 +51,7 @@ export function FormProjeto({
     resolver: zodResolver(projetoSchema),
     defaultValues: {
       titulo: inicial?.titulo ?? '',
+      subtitulo: inicial?.subtitulo ?? '',
       area: inicial?.area ?? '',
       instituicao: inicial?.instituicao ?? '',
       programa: inicial?.programa ?? '',
@@ -81,6 +83,12 @@ export function FormProjeto({
           {...register('titulo')}
         />
         <ErroCampo id="titulo" mensagem={errors.titulo?.message} />
+      </div>
+      <div className="mb-3">
+        <label htmlFor="subtitulo" className="form-label">
+          Subtítulo <span className="text-secondary small">(opcional; usado no artigo)</span>
+        </label>
+        <input id="subtitulo" className="form-control" {...register('subtitulo')} />
       </div>
       <div className="row g-3">
         <div className="col-md-6">

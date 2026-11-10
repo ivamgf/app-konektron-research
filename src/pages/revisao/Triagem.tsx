@@ -9,8 +9,15 @@ import { useProjetoAtual } from '../projeto/ProjetoLayout';
 import { abrirPdf } from '../projeto/Documentos';
 import { chaveEtapas } from './Revisao';
 import { ehFase1ou2, expressoesDoProtocolo, NOME_ONDE, verificarTermos, type ResultadoTermos } from './termosBusca';
-import { faixaNota, perfilDoProtocolo, similaridades, type Similaridade } from './similaridade';
-import { formatarNota, lerLimiar, lerPerfilAjustado, NotaSimilaridade, PainelSimilaridade } from './PainelSimilaridade';
+import {
+  ehSugeridoPorSimilaridade,
+  faixaNota,
+  LIMIAR_SUGESTAO,
+  perfilDoProtocolo,
+  similaridades,
+  type Similaridade,
+} from './similaridade';
+import { formatarNota, lerPerfilAjustado, NotaSimilaridade, PainelSimilaridade } from './PainelSimilaridade';
 import {
   corpoDecisao,
   pendenteParaMim,
@@ -142,15 +149,17 @@ function ResumoTermos({ r }: { r: ResultadoTermos }) {
 }
 
 /** Nota de similaridade do documento aberto, com a barra e os termos em comum com o protocolo */
-function SimilaridadeDoDocumento({ s, limiar }: { s: Similaridade; limiar: number }) {
-  const faixa = faixaNota(s.nota, limiar);
+function SimilaridadeDoDocumento({ s }: { s: Similaridade }) {
+  const faixa = faixaNota(s.nota);
   return (
     <div className={`alert ${faixa === 'alta' ? 'alert-success' : 'alert-light border'} small py-2`}>
       <div className="d-flex align-items-center gap-2">
         <i className="bi bi-bullseye" aria-hidden="true" />
         <span className="fw-medium">
           Similaridade com o tema: {formatarNota(s.nota)}
-          {faixa === 'alta' ? ' — sugerido para seleção' : ''}
+          {faixa === 'alta'
+            ? ' — sugerido para seleção'
+            : ` — abaixo de ${formatarNota(LIMIAR_SUGESTAO)}, sem sugestão (a decisão é sua)`}
         </span>
         <div
           className="progress flex-grow-1"
@@ -162,7 +171,7 @@ function SimilaridadeDoDocumento({ s, limiar }: { s: Similaridade; limiar: numbe
           aria-valuenow={Number(s.nota.toFixed(2))}
         >
           <div
-            className={`progress-bar ${faixa === 'alta' ? 'bg-success' : faixa === 'media' ? 'bg-success opacity-50' : 'bg-secondary'}`}
+            className={`progress-bar ${faixa === 'alta' ? 'bg-success' : 'bg-secondary'}`}
             style={{ width: `${s.nota * 100}%` }}
           />
         </div>
@@ -217,7 +226,6 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
   // fases 1 e 2: similaridade (cosseno TF-IDF) de cada documento com o resumo do protocolo
   const perfilAuto = useMemo(() => perfilDoProtocolo(protocolo.data), [protocolo.data]);
   const [perfilAjustado, setPerfilAjustado] = useState(() => lerPerfilAjustado(projeto.id));
-  const [limiar, setLimiar] = useState(() => lerLimiar(projeto.id));
   const [ordenarSim, setOrdenarSim] = useState(false);
   const [soSimilares, setSoSimilares] = useState(false);
   // o IDF usa todos os documentos da etapa, para a nota não mudar com o filtro
@@ -235,17 +243,19 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
     return m;
   }, [verificar, corpus.data, todosDocs, perfilAjustado, perfilAuto]);
   const temPerfil = perfilAuto.length > 0 || !!perfilAjustado?.trim();
-  const similar = (id: string) => temPerfil && (sims.get(id)?.nota ?? 0) >= limiar;
+  // sugestão só com nota >= 0,7; a seleção continua livre para qualquer documento
+  const similar = (id: string) => temPerfil && ehSugeridoPorSimilaridade(sims.get(id)?.nota ?? 0);
   const qtdSimilares = temPerfil ? todosDocs.filter((d) => similar(d.revisaoDocumentoId)).length : 0;
   const docs = useMemo(() => {
     let l = soSugeridos ? todosDocs.filter((d) => termos.get(d.revisaoDocumentoId)?.sugerido) : todosDocs;
-    if (soSimilares && temPerfil) l = l.filter((d) => (sims.get(d.revisaoDocumentoId)?.nota ?? 0) >= limiar);
+    if (soSimilares && temPerfil)
+      l = l.filter((d) => ehSugeridoPorSimilaridade(sims.get(d.revisaoDocumentoId)?.nota ?? 0));
     if (ordenarSim && temPerfil)
       l = [...l].sort(
         (a, b) => (sims.get(b.revisaoDocumentoId)?.nota ?? 0) - (sims.get(a.revisaoDocumentoId)?.nota ?? 0),
       );
     return l;
-  }, [soSugeridos, soSimilares, ordenarSim, temPerfil, todosDocs, termos, sims, limiar]);
+  }, [soSugeridos, soSimilares, ordenarSim, temPerfil, todosDocs, termos, sims]);
   const completar = useMutation({
     mutationFn: (documentoId: string) =>
       post<{ preenchidos: string[]; fontes: string[] }>(`/documentos/${documentoId}/completar`),
@@ -556,8 +566,6 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                     perfilAuto={perfilAuto}
                     perfilAjustado={perfilAjustado}
                     aoAjustarPerfil={setPerfilAjustado}
-                    limiar={limiar}
-                    aoMudarLimiar={setLimiar}
                     total={todosDocs.length}
                     acima={qtdSimilares}
                     ordenar={ordenarSim}
@@ -695,7 +703,7 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                             </span>
                           )}
                           {temPerfil && sims.get(d.revisaoDocumentoId) && (
-                            <NotaSimilaridade s={sims.get(d.revisaoDocumentoId)!} limiar={limiar} />
+                            <NotaSimilaridade s={sims.get(d.revisaoDocumentoId)!} />
                           )}
                           <span className="small text-secondary ms-auto">{d.ano ?? ''}</span>
                         </div>
@@ -786,7 +794,7 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                         </div>
                       )}
                       {temPerfil && sims.get(atual.revisaoDocumentoId) && (
-                        <SimilaridadeDoDocumento s={sims.get(atual.revisaoDocumentoId)!} limiar={limiar} />
+                        <SimilaridadeDoDocumento s={sims.get(atual.revisaoDocumentoId)!} />
                       )}
                       {termos.get(atual.revisaoDocumentoId) && (
                         <ResumoTermos r={termos.get(atual.revisaoDocumentoId)!} />

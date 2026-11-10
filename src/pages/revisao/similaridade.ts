@@ -194,10 +194,13 @@ export function similaridades<T extends DocTexto>(docs: T[], perfil: TrechoPerfi
   });
 }
 
-/** Faixas de cor da nota: verde a partir do limiar (padrão 0,7) */
-export const LIMIAR_PADRAO = 0.7;
-export function faixaNota(nota: number, limiar = LIMIAR_PADRAO): 'alta' | 'media' | 'baixa' {
-  if (nota >= limiar) return 'alta';
-  if (nota >= limiar * 0.6) return 'media';
+/**
+ * Limiar fixo da sugestão de seleção: só documentos com nota >= 0,7 são sugeridos (em verde).
+ * Abaixo disso não há sugestão, mas o revisor pode selecionar qualquer documento pelo próprio julgamento.
+ */
+export const LIMIAR_SUGESTAO = 0.7;
+export const ehSugeridoPorSimilaridade = (nota: number) => nota >= LIMIAR_SUGESTAO;
+export function faixaNota(nota: number): 'alta' | 'baixa' {
+  if (ehSugeridoPorSimilaridade(nota)) return 'alta';
   return 'baixa';
 }

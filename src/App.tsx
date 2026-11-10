@@ -23,6 +23,7 @@ const Referencias = lazy(() => import('./pages/projeto/Referencias'));
 const Revisoes = lazy(() => import('./pages/projeto/Revisoes'));
 const Analises = lazy(() => import('./pages/projeto/Analises'));
 const Membros = lazy(() => import('./pages/projeto/Membros'));
+const Artigo = lazy(() => import('./pages/projeto/Artigo'));
 const Auditoria = lazy(() => import('./pages/projeto/Auditoria'));
 const Revisao = lazy(() => import('./pages/revisao/Revisao'));
 const Analise = lazy(() => import('./pages/analise/Analise'));
@@ -64,6 +65,7 @@ export function App() {
               <Route path="analises" element={<Analises />} />
               <Route path="analises/:analiseId" element={<Analise />} />
               <Route path="membros" element={<Membros />} />
+              <Route path="artigo" element={<Artigo />} />
               <Route path="auditoria" element={<Auditoria />} />
             </Route>
             <Route path="/tipos-revisao" element={<TiposRevisao />} />

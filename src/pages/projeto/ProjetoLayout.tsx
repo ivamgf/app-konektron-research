@@ -24,6 +24,7 @@ const ABAS = [
   { para: 'revisoes', texto: 'Revisões', icone: 'bi-journal-text' },
   { para: 'analises', texto: 'Análises', icone: 'bi-clipboard-data' },
   { para: 'membros', texto: 'Membros', icone: 'bi-people' },
+  { para: 'artigo', texto: 'Artigo', icone: 'bi-file-earmark-word' },
 ];
 
 export function ProjetoLayout() {

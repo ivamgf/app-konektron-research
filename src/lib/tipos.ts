@@ -21,6 +21,7 @@ export type Pagina<T> = { itens: T[]; page: number; pageSize: number; total: num
 export type Projeto = {
   id: string;
   titulo: string;
+  subtitulo?: string | null;
   area: string | null;
   instituicao: string | null;
   programa: string | null;
