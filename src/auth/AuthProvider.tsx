@@ -65,7 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sair = useCallback(async () => {
     try {
-      await api.post('/auth/logout', {});
+      const refreshToken = sessao.refreshToken();
+      await api.post('/auth/logout', refreshToken ? { refreshToken } : {});
     } catch {
       // a sessão local é encerrada mesmo se a API não responder
     }

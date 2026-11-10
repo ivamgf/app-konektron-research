@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import axios, { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
-import { api, get, mensagemDeErro, sessao } from '../lib/api';
+import { api, get, mensagemDeErro, renovarSessao, sessao } from '../lib/api';
 
 function erro401(config: InternalAxiosRequestConfig) {
   return new AxiosError('401', 'ERR', config, null, {
@@ -57,6 +57,30 @@ describe('cliente da API', () => {
     await expect(get('/me')).rejects.toBeInstanceOf(AxiosError);
     expect(expirou).toHaveBeenCalled();
     expect(sessao.token()).toBeNull();
+  });
+
+  it('guarda o refresh token para retomar a sessão depois do F5', async () => {
+    sessao.definir({ accessToken: 'velho', refreshToken: 'rt-1' });
+    expect(localStorage.getItem('kr_rt')).toBe('rt-1');
+    // F5: a memória some, só o que foi guardado fica
+    sessao.definir(null);
+    localStorage.setItem('kr_rt', 'rt-1');
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: { accessToken: 'novo', refreshToken: 'rt-2' } });
+    await expect(renovarSessao()).resolves.toBe(true);
+    expect(refresh.mock.calls[0][1]).toEqual({ refreshToken: 'rt-1' });
+    expect(localStorage.getItem('kr_rt')).toBe('rt-2'); // o token rotacionado substitui o usado
+    expect(sessao.token()).toBe('novo');
+  });
+
+  it('falha de rede no refresh não apaga o token guardado; recusa da API apaga', async () => {
+    localStorage.setItem('kr_rt', 'rt-1');
+    vi.spyOn(axios, 'post').mockRejectedValueOnce(new AxiosError('rede', 'ERR_NETWORK'));
+    await expect(renovarSessao()).resolves.toBe(false);
+    expect(localStorage.getItem('kr_rt')).toBe('rt-1');
+    const config = { headers: new AxiosHeaders() } as InternalAxiosRequestConfig;
+    vi.spyOn(axios, 'post').mockRejectedValueOnce(erro401(config));
+    await expect(renovarSessao()).resolves.toBe(false);
+    expect(localStorage.getItem('kr_rt')).toBeNull();
   });
 
   it('formata os erros da API com os campos inválidos', () => {
