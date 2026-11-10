@@ -13,6 +13,10 @@ import { AuthProvider } from './auth/AuthProvider';
 import { App } from './App';
 import { lerErro } from './lib/api';
 import { iniciarTraducaoDoSite } from './lib/traducaoSite';
+import { aplicarPreferencias, lerPreferencias } from './lib/acessibilidade';
+
+// acessibilidade (contraste, tamanho da fonte…) antes de montar, para a tela não piscar
+aplicarPreferencias(lerPreferencias());
 
 // inglês/espanhol: carrega a tradução automática antes de montar o app
 iniciarTraducaoDoSite();
