@@ -11,6 +11,7 @@ import type { Projeto } from '../lib/tipos';
 import { Abas, Cabecalho, Carregando, ErroAlerta, Modal, Situacao, Vazio } from '../components/ui';
 import { ariaErro, ErroCampo } from './auth/CartaoAuth';
 import { TOTAL_PASSOS } from './projeto/protocoloPassos';
+import { chavePlano, nomePlano, usePlano } from '../lib/planos';
 
 // RF05: título, área, instituição, programa, datas
 export const projetoSchema = z
@@ -152,6 +153,9 @@ export function Projetos() {
   const navegar = useNavigate();
   const qc = useQueryClient();
   const params = filtro === 'LIXEIRA' ? { lixeira: true } : { status: filtro };
+  // plano FREE: até 3 projetos; no limite o botão fica desabilitado e aparece o convite ao upgrade
+  const plano = usePlano();
+  const limiteAtingido = !!plano.data && !plano.data.podeCriarProjeto;
   const lista = useQuery({
     queryKey: [...chaves.projetos, filtro],
     queryFn: () => get<Projeto[]>('/projetos', params),
@@ -164,11 +168,49 @@ export function Projetos() {
   return (
     <>
       <Cabecalho titulo="Projetos de pesquisa" subtitulo="Projetos em que você é membro">
-        <button className="btn btn-primary" onClick={() => setNovo(true)}>
+        <button
+          className="btn btn-primary"
+          onClick={() => setNovo(true)}
+          disabled={plano.data ? !plano.data.podeCriarProjeto : false}
+          aria-describedby={limiteAtingido ? 'aviso-limite' : undefined}
+        >
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           Novo projeto
         </button>
       </Cabecalho>
+      {plano.data && plano.data.limiteProjetos !== null && (
+        <div
+          id="aviso-limite"
+          className={`alert ${limiteAtingido ? 'alert-warning' : 'alert-light border'} d-flex flex-wrap align-items-center gap-2 py-2`}
+          role={limiteAtingido ? 'alert' : 'status'}
+        >
+          <i className={`bi ${limiteAtingido ? 'bi-exclamation-triangle' : 'bi-info-circle'}`} aria-hidden="true" />
+          <span className="me-auto small">
+            {limiteAtingido ? (
+              <>
+                Você usou os {plano.data.limiteProjetos} projetos do plano {nomePlano(plano.data.plano)}. Faça o upgrade
+                para continuar criando projetos.
+                {plano.data.expiraEm && (
+                  <>
+                    {' '}
+                    Seus projetos ficam disponíveis até <strong>{data(plano.data.expiraEm)}</strong>; depois disso são
+                    removidos e a conta fica bloqueada até o upgrade.
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                Plano {nomePlano(plano.data.plano)}: {plano.data.projetosUsados} de {plano.data.limiteProjetos} projetos
+                usados.
+              </>
+            )}
+          </span>
+          <Link to="/planos" className={`btn btn-sm ${limiteAtingido ? 'btn-warning' : 'btn-outline-primary'}`}>
+            <i className="bi bi-stars me-1" aria-hidden="true" />
+            Fazer upgrade
+          </Link>
+        </div>
+      )}
 
       <Abas
         abas={FILTROS}
@@ -251,7 +293,10 @@ export function Projetos() {
           textoBotao="Criar projeto"
           aoSalvar={async (d) => {
             const p = await post<Projeto>('/projetos', paraApi(d));
-            await qc.invalidateQueries({ queryKey: chaves.projetos });
+            await Promise.all([
+              qc.invalidateQueries({ queryKey: chaves.projetos }),
+              qc.invalidateQueries({ queryKey: chavePlano }),
+            ]);
             setNovo(false);
             navegar(`/projetos/${p.id}/protocolo`);
           }}

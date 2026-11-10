@@ -1,3 +1,4 @@
+import type { Plano, Recurso } from './planos';
 // Formatos devolvidos pela API (camelCase). Campos não usados pelo app ficam de fora.
 
 export type PerfilGlobal = 'ADMIN' | 'USUARIO';
@@ -14,6 +15,18 @@ export type Usuario = {
   ativo: boolean;
   emailVerificadoEm: string | null;
   criadoEm: string;
+  plano?: Plano;
+};
+
+/** Usuário na administração: inclui a opção interna "vitalício" e o prazo do plano gratuito */
+export type UsuarioAdmin = Usuario & {
+  plano: Plano;
+  planoVitalicio: boolean;
+  descontoEstudante: boolean;
+  planoEfetivo: Plano;
+  planoExpiraEm: string | null;
+  planoBloqueadoEm: string | null;
+  projetosCriados: number;
 };
 
 export type Pagina<T> = { itens: T[]; page: number; pageSize: number; total: number };
@@ -35,6 +48,8 @@ export type Projeto = {
   protocoloPasso?: number;
   revisoes?: number;
   protocolo?: { id: string; status: StatusProtocolo; versaoAtual: number; passoAtual: number };
+  /** recursos do plano de quem criou o projeto (GET /projetos/:id) */
+  recursos?: Recurso[];
 };
 
 export type StatusProtocolo = 'RASCUNHO' | 'CONCLUIDO' | 'APROVADO' | 'DEVOLVIDO';

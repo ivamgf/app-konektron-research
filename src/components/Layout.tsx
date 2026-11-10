@@ -7,6 +7,7 @@ import type { Notificacao } from '../lib/tipos';
 import { Carregando } from './ui';
 import { SeletorIdioma } from './SeletorIdioma';
 import { LinkAcessibilidade } from './Acessibilidade';
+import { usePlano } from '../lib/planos';
 
 export function Marca({ grande = false }: { grande?: boolean }) {
   return (
@@ -58,6 +59,7 @@ const MENU = [
   { para: '/tipos-revisao', icone: 'bi-diagram-3', texto: 'Tipos de revisão' },
   { para: '/notificacoes', icone: 'bi-bell', texto: 'Notificações' },
   { para: '/perfil', icone: 'bi-person-circle', texto: 'Perfil' },
+  { para: '/planos', icone: 'bi-stars', texto: 'Planos' },
 ];
 const MENU_ADMIN = [
   { para: '/admin/usuarios', icone: 'bi-people', texto: 'Usuários' },
@@ -86,6 +88,8 @@ export function Layout() {
     enabled: !!usuario,
     refetchInterval: 60_000,
   });
+
+  const plano = usePlano(!!usuario);
 
   if (carregando) return <Carregando texto="Abrindo o Konektron Research…" />;
   if (!usuario) return <Navigate to="/login" replace state={{ de: local.pathname + local.search }} />;
@@ -174,8 +178,37 @@ export function Layout() {
           </Link>
         </header>
         <main id="conteudo" tabIndex={-1} className="container-fluid p-3 p-lg-4">
-          <Outlet />
+          {/* plano gratuito expirado: só o perfil e as notificações continuam abertos até o upgrade */}
+          {plano.data?.bloqueado && !['/perfil', '/notificacoes'].includes(local.pathname) ? (
+            <ContaBloqueada />
+          ) : (
+            <Outlet />
+          )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+/** Fim dos 3 meses do plano gratuito: projetos removidos e acesso só ao upgrade */
+function ContaBloqueada() {
+  return (
+    <div
+      className="card border-0 bg-body-tertiary text-center p-4 p-md-5 mx-auto"
+      style={{ maxWidth: 640 }}
+      role="alert"
+    >
+      <i className="bi bi-lock-fill fs-1 text-secondary mb-2" aria-hidden="true" />
+      <h1 className="h4">O período do plano gratuito terminou</h1>
+      <p className="text-secondary">
+        Os projetos do plano Free ficam 3 meses no sistema depois de atingido o limite de projetos. Esse prazo terminou
+        e sua conta está bloqueada. Faça o upgrade em até 30 dias para recuperar seus projetos.
+      </p>
+      <div>
+        <Link to="/planos" className="btn btn-primary btn-lg">
+          <i className="bi bi-stars me-1" aria-hidden="true" />
+          Ver planos e fazer upgrade
+        </Link>
       </div>
     </div>
   );

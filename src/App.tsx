@@ -13,6 +13,7 @@ import { Inicio } from './pages/publico/Inicio';
 import { Cadastro } from './pages/publico/Cadastro';
 import { TituloDaPagina } from './components/TituloDaPagina';
 import { Acessibilidade } from './components/Acessibilidade';
+import { ExigeRecurso } from './components/Plano';
 
 // Telas maiores carregadas sob demanda
 const Protocolo = lazy(() => import('./pages/projeto/Protocolo'));
@@ -33,6 +34,7 @@ const Notificacoes = lazy(() => import('./pages/Notificacoes'));
 const Convite = lazy(() => import('./pages/Convite'));
 const Usuarios = lazy(() => import('./pages/admin/Usuarios'));
 const Catalogos = lazy(() => import('./pages/admin/Catalogos'));
+const Planos = lazy(() => import('./pages/publico/Planos'));
 
 export function App() {
   return (
@@ -44,6 +46,7 @@ export function App() {
           <Route path="/" element={<Inicio />} />
           <Route path="/registrar" element={<Cadastro />} />
           <Route path="/cadastro" element={<Navigate to="/registrar" replace />} />
+          <Route path="/planos" element={<Planos />} />
           <Route path="/login" element={<Login />} />
           <Route path="/esqueci-senha" element={<EsqueciSenha />} />
           {/* links dos e-mails da API (APP_URL/...) */}
@@ -56,16 +59,44 @@ export function App() {
             <Route path="/projetos/:projetoId" element={<ProjetoLayout />}>
               <Route index element={<VisaoGeral />} />
               <Route path="protocolo" element={<Protocolo />} />
-              <Route path="questoes" element={<Questoes />} />
+              <Route
+                path="questoes"
+                element={
+                  <ExigeRecurso recurso="QUESTOES">
+                    <Questoes />
+                  </ExigeRecurso>
+                }
+              />
               <Route path="criterios" element={<Criterios />} />
               <Route path="documentos" element={<Documentos />} />
               <Route path="referencias" element={<Referencias />} />
               <Route path="revisoes" element={<Revisoes />} />
               <Route path="revisoes/:revisaoId" element={<Revisao />} />
-              <Route path="analises" element={<Analises />} />
-              <Route path="analises/:analiseId" element={<Analise />} />
+              <Route
+                path="analises"
+                element={
+                  <ExigeRecurso recurso="ANALISES">
+                    <Analises />
+                  </ExigeRecurso>
+                }
+              />
+              <Route
+                path="analises/:analiseId"
+                element={
+                  <ExigeRecurso recurso="ANALISES">
+                    <Analise />
+                  </ExigeRecurso>
+                }
+              />
               <Route path="membros" element={<Membros />} />
-              <Route path="artigo" element={<Artigo />} />
+              <Route
+                path="artigo"
+                element={
+                  <ExigeRecurso recurso="ARTIGO">
+                    <Artigo />
+                  </ExigeRecurso>
+                }
+              />
               <Route path="auditoria" element={<Auditoria />} />
             </Route>
             <Route path="/tipos-revisao" element={<TiposRevisao />} />
