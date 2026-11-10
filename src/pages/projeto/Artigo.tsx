@@ -6,8 +6,11 @@ import { dataHora } from '../../lib/formato';
 import { Carregando, ErroAlerta } from '../../components/ui';
 import { useProjetoAtual } from './ProjetoLayout';
 import {
+  AVISO_TEXTO_BASE,
   citacao,
   completarRascunho,
+  DECLARACOES,
+  modeloDeclaracao,
   FRASE_CAPES,
   ITENS_INTRODUCAO,
   MARCADOR_FUNDACOES,
@@ -71,7 +74,9 @@ export const GUIA: Record<string, ReactNode> = {
   revisao: (
     <>
       Montada a partir das revisões do projeto: bases, strings de busca, critérios e os números de cada etapa (F1, F2,
-      F3), os mesmos do diagrama de fluxo. Confira os números e, se o periódico pedir, inclua o diagrama como figura.
+      F3), os mesmos do diagrama de fluxo. Logo depois do texto entra um quadro com os artigos incluídos (selecionados
+      nas buscas, de revisão anterior e integrados), com autor e ano, título, periódico e origem. Confira os números e,
+      se o periódico pedir, inclua o diagrama como figura.
     </>
   ),
   analise: (
@@ -102,10 +107,18 @@ export const GUIA: Record<string, ReactNode> = {
   ),
   declaracaoIa: (
     <>
-      Exigida pela Portaria CNPq nº 2.664/2026 (art. 9º, I, “c”, “d” e “f”): informe a ferramenta e a finalidade de cada
-      uso de IA Generativa, em qualquer fase da pesquisa. A lista vem dos usos de IA registrados neste projeto;
-      acrescente os usos feitos fora do Konektron. A portaria não traz um texto oficial: este modelo segue os requisitos
-      dela.
+      Exigida pela Portaria CNPq nº 2.664/2026 (art. 9º, I, “c”, “d” e “f”): informe a ferramenta, a fase (concepção,
+      redação, análise de dados, submissão) e a finalidade de cada uso de IA Generativa. A lista vem dos usos de IA
+      registrados neste projeto; acrescente os usos feitos fora do Konektron. A portaria não traz um texto oficial: este
+      é um modelo não oficial que segue os requisitos dela e deve ser revisado pelos autores.
+    </>
+  ),
+  declaracoes: (
+    <>
+      Declarações que a Portaria CNPq nº 2.664/2026 pede para a publicação: contribuição de cada autor (art. 9º, II, “p”
+      a “s”), conflito de interesses, disponibilidade dos dados em repositório confiável (art. 9º, I, “g”) e divulgação
+      prévia ou versões anteriores (art. 9º, II, “e” e “u”). Os textos são modelos não oficiais: troque o que está entre
+      colchetes e confira as exigências do periódico.
     </>
   ),
   referencias: (
@@ -128,6 +141,7 @@ const SECOES = [
   ['discussao', 'Discussão'],
   ['conclusoes', 'Conclusões'],
   ['agradecimentos', 'Agradecimentos'],
+  ['declaracoes', 'Declarações (autoria, dados…)'],
   ['declaracaoIa', 'Declaração de uso de IA'],
   ['referencias', 'Referências'],
 ] as const;
@@ -137,11 +151,14 @@ function Secao({
   titulo,
   children,
   acoes,
+  base,
 }: {
   id: string;
   titulo: string;
   children: ReactNode;
   acoes?: ReactNode;
+  /** a seção traz texto montado pelo sistema (modelo, protocolo, resumos do assunto ou IA) */
+  base?: boolean;
 }) {
   return (
     <section className="card mb-3" id={`artigo-${id}`} aria-labelledby={`artigo-${id}-titulo`}>
@@ -156,6 +173,13 @@ function Secao({
           <i className="bi bi-lightbulb me-1 text-warning" aria-hidden="true" />
           {GUIA[id]}
         </div>
+        {base && (
+          <p className="small k-texto-base mb-3">
+            <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
+            <strong>Texto-base, não oficial:</strong> o que o sistema monta nesta seção serve só para revisão. Reescreva
+            com suas palavras antes de submeter.
+          </p>
+        )}
         {children}
       </div>
     </section>
@@ -405,6 +429,23 @@ export default function Artigo() {
           para o seu texto. O rascunho fica salvo no projeto e o arquivo final sai em Word (.docx), com Times New Roman
           12.
         </p>
+        <div className="alert alert-warning small" role="note">
+          <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
+          <strong>Atenção:</strong> {AVISO_TEXTO_BASE}
+          <div className="form-check mt-2 mb-0">
+            <input
+              id="art-destacar"
+              type="checkbox"
+              className="form-check-input"
+              checked={d.destacarGerados}
+              onChange={(e) => mudar({ destacarGerados: e.target.checked })}
+            />
+            <label htmlFor="art-destacar" className="form-check-label">
+              Destacar em amarelo, no Word, os trechos montados pelo sistema que ainda não foram reescritos (o que você
+              alterar aqui deixa de ser destacado)
+            </label>
+          </div>
+        </div>
 
         <Secao id="titulo" titulo="Título e subtítulo">
           <div className="mb-2">
@@ -561,7 +602,7 @@ export default function Artigo() {
           )}
         </Secao>
 
-        <Secao id="introducao" titulo="Introdução">
+        <Secao base id="introducao" titulo="Introdução">
           <Texto
             id="art-intro"
             rotulo="Texto de abertura (contexto, problema e lacuna)"
@@ -601,7 +642,7 @@ export default function Artigo() {
           <Previa titulo="Introdução" documento={documento} />
         </Secao>
 
-        <Secao id="fundamentacao" titulo="Fundamentação teórica">
+        <Secao base id="fundamentacao" titulo="Fundamentação teórica">
           <Texto
             id="art-fund"
             rotulo="Seu texto"
@@ -618,6 +659,7 @@ export default function Artigo() {
         </Secao>
 
         <Secao
+          base
           id="metodologia"
           titulo="Metodologia"
           acoes={<BotaoRestaurar aoClicar={() => mudar({ metodologia: { texto: textoMetodologia(f) } })} />}
@@ -632,24 +674,47 @@ export default function Artigo() {
         </Secao>
 
         <Secao
+          base
           id="revisao"
           titulo="Revisão de literatura"
-          acoes={<BotaoRestaurar aoClicar={() => mudar({ revisao: { texto: textoRevisao(f) } })} />}
+          acoes={<BotaoRestaurar aoClicar={() => mudar({ revisao: { ...d.revisao, texto: textoRevisao(f) } })} />}
         >
           {f.revisoes.length ? (
-            <Texto
-              id="art-revisao"
-              rotulo="Texto da seção"
-              linhas={10}
-              valor={d.revisao.texto}
-              aoMudar={(v) => mudar({ revisao: { texto: v } })}
-            />
+            <>
+              <Texto
+                id="art-revisao"
+                rotulo="Texto da seção"
+                linhas={10}
+                valor={d.revisao.texto}
+                aoMudar={(v) => mudar({ revisao: { ...d.revisao, texto: v } })}
+              />
+              <div className="form-check small">
+                <input
+                  id="art-tabela"
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={d.revisao.tabela}
+                  onChange={(e) => mudar({ revisao: { ...d.revisao, tabela: e.target.checked } })}
+                />
+                <label htmlFor="art-tabela" className="form-check-label">
+                  Incluir o quadro dos artigos incluídos:{' '}
+                  {f.revisoes
+                    .map((r) => {
+                      const l = r.incluidos ?? [];
+                      const n = (o: string) => l.filter((x) => x.origem === o).length;
+                      return `${f.revisoes.length > 1 ? `${r.titulo}: ` : ''}${l.length} (${n('BUSCA') + n('MANUAL')} das buscas, ${n('REVISAO_ANTERIOR')} de revisão anterior, ${n('INTEGRADO')} integrados)`;
+                    })
+                    .join('; ')}
+                </label>
+              </div>
+              <Previa titulo="Revisão de literatura" documento={documento} />
+            </>
           ) : (
             <p className="small text-secondary mb-0">O projeto ainda não tem revisões de literatura.</p>
           )}
         </Secao>
 
-        <Secao id="analise" titulo="Análise">
+        <Secao base id="analise" titulo="Análise">
           <Texto
             id="art-analise"
             rotulo="Seu texto"
@@ -665,7 +730,7 @@ export default function Artigo() {
           />
         </Secao>
 
-        <Secao id="discussao" titulo="Discussão">
+        <Secao base id="discussao" titulo="Discussão">
           <Texto
             id="art-discussao"
             rotulo="Seu texto"
@@ -721,6 +786,7 @@ export default function Artigo() {
         </Secao>
 
         <Secao
+          base
           id="agradecimentos"
           titulo="Agradecimentos"
           acoes={
@@ -766,7 +832,61 @@ export default function Artigo() {
           </div>
         </Secao>
 
+        <Secao base id="declaracoes" titulo="Declarações (Portaria CNPq nº 2.664/2026)">
+          {DECLARACOES.map(([k, nome, artigo]) => (
+            <div key={k} className="border rounded p-2 mb-2">
+              <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                <div className="form-check mb-0 me-auto">
+                  <input
+                    id={`decl-${k}`}
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={d.declaracoes[k].incluir}
+                    onChange={(e) =>
+                      mudar({
+                        declaracoes: { ...d.declaracoes, [k]: { ...d.declaracoes[k], incluir: e.target.checked } },
+                      })
+                    }
+                  />
+                  <label htmlFor={`decl-${k}`} className="form-check-label fw-medium">
+                    {nome} <span className="text-secondary fw-normal small">({artigo})</span>
+                  </label>
+                </div>
+                <BotaoRestaurar
+                  texto="Restaurar o modelo"
+                  aoClicar={() =>
+                    mudar({
+                      declaracoes: {
+                        ...d.declaracoes,
+                        [k]: {
+                          ...d.declaracoes[k],
+                          texto: modeloDeclaracao(
+                            k,
+                            f,
+                            d.autores.filter((a) => a.incluir).map((a) => autoresPorId.get(a.usuarioId)?.nome ?? ''),
+                          ),
+                        },
+                      },
+                    })
+                  }
+                />
+              </div>
+              {d.declaracoes[k].incluir && (
+                <Texto
+                  id={`decl-texto-${k}`}
+                  rotulo={`Texto: ${nome.toLowerCase()}`}
+                  linhas={4}
+                  valor={d.declaracoes[k].texto}
+                  aoMudar={(v) => mudar({ declaracoes: { ...d.declaracoes, [k]: { ...d.declaracoes[k], texto: v } } })}
+                  dica="Troque o que estiver entre colchetes. Linhas começando com “- ” viram lista."
+                />
+              )}
+            </div>
+          ))}
+        </Secao>
+
         <Secao
+          base
           id="declaracaoIa"
           titulo="Declaração de uso de IA"
           acoes={
@@ -811,7 +931,7 @@ export default function Artigo() {
             linhas={10}
             valor={d.declaracaoIa.texto}
             aoMudar={(v) => mudar({ declaracaoIa: { ...d.declaracaoIa, texto: v } })}
-            dica="Troque o que estiver entre colchetes e descreva a finalidade de cada uso (ex.: revisão linguística, tradução, resumo do assunto, organização de dados)."
+            dica="Troque o que estiver entre colchetes, confira a fase e descreva a finalidade de cada uso (ex.: revisão linguística, tradução, resumo do assunto, organização de dados)."
           />
         </Secao>
 
@@ -884,7 +1004,32 @@ function Previa({ titulo, documento }: { titulo: string; documento: ReturnType<t
         <div className="border rounded p-2 mt-1 small k-leitura bg-body-tertiary">
           <strong>{s.titulo}</strong>
           {s.blocos.map((b, i) =>
-            b.tipo === 'lista' ? (
+            b.tipo === 'tabela' ? (
+              <div key={i} className="mb-2">
+                <div className="fw-medium">{b.texto}</div>
+                <div className="table-responsive" style={{ maxHeight: 260 }}>
+                  <table className="table table-sm table-bordered mb-1">
+                    <thead>
+                      <tr>
+                        {b.cabecalho?.map((c) => (
+                          <th key={c}>{c}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {b.linhas?.map((l, j) => (
+                        <tr key={j}>
+                          {l.map((c, k) => (
+                            <td key={k}>{c}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="text-secondary">{b.fonte}</div>
+              </div>
+            ) : b.tipo === 'lista' ? (
               <ul key={i} className="mb-2">
                 {b.itens?.map((x, j) => (
                   <li key={j}>{x}</li>
@@ -892,7 +1037,7 @@ function Previa({ titulo, documento }: { titulo: string; documento: ReturnType<t
               </ul>
             ) : (
               <p key={i} className="mb-2">
-                {b.texto}
+                {b.gerado ? <mark title="Montado pelo sistema: reescreva com suas palavras">{b.texto}</mark> : b.texto}
               </p>
             ),
           )}

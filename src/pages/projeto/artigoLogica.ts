@@ -37,6 +37,17 @@ export type RevisaoFonte = {
     totalOutrasFontes: number;
     incluidos: { novos: number; revisaoAnterior: number; integrados: number; total: number };
   };
+  /** artigos incluídos ao final da revisão (selecionados nas buscas, de revisão anterior e integrados) */
+  incluidos?: IncluidoFonte[];
+};
+export type IncluidoFonte = {
+  origem: 'BUSCA' | 'REVISAO_ANTERIOR' | 'INTEGRADO' | 'MANUAL';
+  titulo: string;
+  autores: string | null;
+  ano: number | null;
+  periodico: string | null;
+  doi: string | null;
+  baseNome: string | null;
 };
 export type DocAnalisado = {
   id: string;
@@ -124,14 +135,26 @@ export type DadosArtigo = {
   introducao: { texto: string; incluir: ItemIntroducao[] };
   fundamentacao: { texto: string; documentos: string[] };
   metodologia: { texto: string };
-  revisao: { texto: string };
+  revisao: { texto: string; tabela: boolean };
   analise: { texto: string; documentos: string[] };
   discussao: { texto: string; itens: string[] };
   conclusoes: { texto: string };
   agradecimentos: { texto: string; fundacoes: string; capes: boolean };
   declaracaoIa: { usou: boolean; texto: string };
+  /** declarações pedidas pela Portaria CNPq nº 2.664/2026 (autoria, dados, divulgação prévia) */
+  declaracoes: Record<ChaveDeclaracao, { incluir: boolean; texto: string }>;
   referencias: { estilo: 'ABNT' | 'APA'; excluidas: string[] };
+  /** destacar em amarelo, no Word, os trechos montados pelo sistema que o autor ainda não reescreveu */
+  destacarGerados: boolean;
 };
+
+export const DECLARACOES = [
+  ['contribuicao', 'Contribuição dos autores', 'art. 9º, II, “p”, “q”, “r” e “s”'],
+  ['conflito', 'Conflito de interesses', 'art. 5º, VII, e art. 9º, II'],
+  ['dados', 'Disponibilidade dos dados', 'art. 9º, I, “g”, e II, “n”'],
+  ['divulgacao', 'Divulgação prévia e originalidade', 'art. 9º, II, “e”, “f” e “u”'],
+] as const;
+export type ChaveDeclaracao = (typeof DECLARACOES)[number][0];
 
 const vazio = (s?: string | null) => !s?.trim();
 const limpar = (s?: string | null) => (s ?? '').trim().replace(/\s+$/g, '');
@@ -153,16 +176,37 @@ export function nomeMetodologia(p: FontesArtigo['protocolo']) {
 
 /** Citação autor-data (ABNT): "SILVA, João; SOUZA, Ana" + 2020 → "(SILVA; SOUZA, 2020)"; 3+ → "(SILVA et al., 2020)" */
 export function citacao(autores: string | null, ano: number | null): string {
-  const lista = (autores ?? '')
-    .split(/\s*;\s*|\s+and\s+|\s+e\s+(?=[A-ZÀ-Ý]{2,},)/)
-    .map((a) => a.trim())
-    .filter(Boolean);
-  const sobrenome = (a: string) =>
-    (a.includes(',') ? a.split(',')[0] : (a.split(/\s+/).at(-1) ?? a)).trim().toUpperCase();
+  const lista = autoresDe(autores);
   const data = ano ?? 's.d.';
   if (!lista.length) return `(AUTOR DESCONHECIDO, ${data})`;
-  if (lista.length >= 3) return `(${sobrenome(lista[0])} et al., ${data})`;
-  return `(${lista.map(sobrenome).join('; ')}, ${data})`;
+  if (lista.length >= 3) return `(${lista[0]} et al., ${data})`;
+  return `(${lista.join('; ')}, ${data})`;
+}
+
+/** Autor(es) e ano fora dos parênteses, para tabelas: "SILVA et al. (2020)" */
+export function autoriaCurta(autores: string | null, ano: number | null): string {
+  const lista = autoresDe(autores);
+  const data = ano ?? 's.d.';
+  if (!lista.length) return `Autor desconhecido (${data})`;
+  return `${lista.length >= 3 ? `${lista[0]} et al.` : lista.join('; ')} (${data})`;
+}
+
+/** Sobrenomes em maiúsculas: "SILVA, João; SOUZA, Ana" ou, no estilo Vancouver, "Amadi D, Banda JM." */
+function autoresDe(autores: string | null): string[] {
+  const t = (autores ?? '').trim().replace(/\.$/, '');
+  if (!t) return [];
+  const vancouver = !t.includes(';') && t.split(/\s*,\s*/).every((p) => /^[\p{L}'’\- ]+\s[A-Z]{1,4}$/u.test(p.trim()));
+  const lista = vancouver
+    ? t.split(/\s*,\s*/)
+    : t
+        .split(/\s*;\s*|\s+and\s+|\s+e\s+(?=[A-ZÀ-Ý]{2,},)/)
+        .map((a) => a.trim())
+        .filter(Boolean);
+  return lista.map((a) =>
+    (vancouver ? a.replace(/\s[A-Z]{1,4}$/, '') : a.includes(',') ? a.split(',')[0] : (a.split(/\s+/).at(-1) ?? a))
+      .trim()
+      .toUpperCase(),
+  );
 }
 
 const NOMES_PROVEDOR: Record<string, string> = {
@@ -201,16 +245,30 @@ export function modeloDeclaracaoIa(usou: boolean, usos: UsoIa[]): string {
     ? usos
         .map(
           (u) =>
-            `- ${nomeFerramenta(u)}${u.modo === 'ASSISTENTE' ? ', por meio do assistente (chat)' : ''}: ${u.recursos.length ? listaPt(u.recursos.map(minuscula)) : '[descreva a finalidade]'} (${u.vezes} uso(s) registrado(s) no Konektron Research entre ${dataBr(u.primeiro)} e ${dataBr(u.ultimo)}).`,
+            `- ${nomeFerramenta(u)}${u.modo === 'ASSISTENTE' ? ', por meio do assistente (chat)' : ''} – fase: ${listaPt([...new Set(u.recursos.map(faseDoUso))]) || '[informe a fase]'}; finalidade: ${u.recursos.length ? listaPt(u.recursos.map(minuscula)) : '[descreva a finalidade]'} (${u.vezes} uso(s) registrado(s) no Konektron Research entre ${dataBr(u.primeiro)} e ${dataBr(u.ultimo)}).`,
         )
         .join('\n')
-    : '- [Ferramenta e versão]: [etapa da pesquisa em que foi usada e finalidade].';
+    : '- [Ferramenta e versão] – fase: [concepção, redação, análise de dados ou submissão]; finalidade: [descreva].';
   return [
     `Em conformidade com a ${PORTARIA_CNPQ}, art. 9º, inciso I, alíneas "c", "d" e "f", os autores declaram que utilizaram ferramentas de Inteligência Artificial Generativa (IAG) neste trabalho, como apoio às etapas indicadas abaixo:`,
     ferramentas,
-    'As ferramentas foram empregadas de forma complementar e instrumental, sem delegação da autoria intelectual, da interpretação científica ou das decisões metodológicas. Todo conteúdo produzido com apoio de IAG foi revisado, verificado nas fontes originais e validado pelos autores, e nenhum conteúdo gerado por IAG é apresentado como de autoria humana.',
+    '- [Acrescente aqui os usos de IAG feitos fora do Konektron Research, com a ferramenta, a fase e a finalidade.]',
+    'As ferramentas foram empregadas de forma complementar e instrumental, sem delegação da autoria intelectual, da interpretação científica ou das decisões metodológicas. Os textos produzidos com apoio de IAG serviram apenas como base: foram reescritos pelos autores com suas próprias palavras, e as informações, as citações e as referências foram conferidas nas fontes originais. Nenhum conteúdo gerado por IAG é apresentado como de autoria humana.',
     'Os autores assumem integral responsabilidade pelo conteúdo final, inclusive por eventuais imprecisões ou plágios decorrentes do uso dessas ferramentas.',
   ].join('\n\n');
+}
+
+/** Fase da pesquisa de um uso de IA, pelo nome do recurso registrado (art. 9º, I, "c") */
+export function faseDoUso(recurso: string): string {
+  const r = recurso.toLowerCase();
+  if (/tradu/.test(r)) return 'redação (tradução)';
+  if (/resumo do assunto|análise|analise|resposta|matriz|discuss|síntese|sintese/.test(r)) return 'análise de dados';
+  if (
+    /protocolo|objetivo|quest|justificativa|hip[oó]tese|string|palavra|descritor|crit[eé]rio|tema|metodologia/.test(r)
+  )
+    return 'concepção';
+  if (/complet|metadad|refer[eê]ncia|busca/.test(r)) return 'levantamento bibliográfico';
+  return 'redação';
 }
 
 export const FRASE_CAPES =
@@ -222,6 +280,83 @@ export function modeloAgradecimentos(instituicao: string | null) {
     `Os autores agradecem ao(à) ${MARCADOR_FUNDACOES} pelo apoio financeiro concedido a esta pesquisa.`,
     `Agradecem também ${instituicao ? `à ${instituicao}` : 'à instituição de vínculo'}, pela infraestrutura disponibilizada, e a todas as pessoas que contribuíram para a realização deste trabalho.`,
   ].join('\n\n');
+}
+
+/** Aviso: o que o sistema monta não é texto oficial nem de autoria do pesquisador */
+export const AVISO_TEXTO_BASE =
+  'Os textos montados pelo sistema (modelos, trechos do protocolo, descrições geradas, resumos do assunto e textos produzidos com IA) não são textos oficiais nem de sua autoria: servem apenas como base para revisão. Reescreva-os com suas palavras, confira dados e citações nas fontes originais e declare o uso de IA. Apresentar conteúdo gerado como se fosse de autoria humana é vedado (Portaria CNPq nº 2.664/2026, art. 9º, I, “d”).';
+
+export function modeloDeclaracao(k: ChaveDeclaracao, f: FontesArtigo, nomesAutores: string[]): string {
+  switch (k) {
+    case 'contribuicao':
+      return [
+        'Contribuição de cada autor (descreva o que cada pessoa fez; inclua como autor só quem contribuiu de forma significativa):',
+        (nomesAutores.length ? nomesAutores : ['[Autor]'])
+          .map(
+            (n) =>
+              `- ${n}: [concepção, metodologia, busca e seleção dos estudos, análise dos dados, redação, revisão crítica, supervisão]`,
+          )
+          .join('\n'),
+        'Todos os autores leram e aprovaram a versão final e respondem pela veracidade, integridade e confiabilidade do trabalho, cabendo ao primeiro autor e ao autor de correspondência a responsabilidade integral.',
+      ].join('\n\n');
+    case 'conflito':
+      return 'Os autores declaram não haver conflito de interesses, pessoais, institucionais ou financeiros, que possa ter influenciado este trabalho. [Se houver, descreva-o aqui.]';
+    case 'dados': {
+      const registros = f.revisoes
+        .map((r) => [r.registroIdentificador, r.registroUrl].filter(Boolean).join(' – '))
+        .filter(Boolean);
+      return registros.length
+        ? `O protocolo, as estratégias de busca, as decisões de triagem e os dados extraídos estão depositados e disponíveis em: ${registros.join('; ')}.`
+        : 'O protocolo, as estratégias de busca, as decisões de triagem e os dados extraídos estão disponíveis em [informe o repositório de dados confiável, com o identificador persistente (DOI)].';
+    }
+    case 'divulgacao':
+      return 'Este trabalho é original, não foi publicado nem submetido, total ou parcialmente, a outro periódico, e não é fragmentação de resultados de outro estudo. [Informe aqui apresentações públicas, preprints ou versões anteriores, se houver.]';
+  }
+}
+
+/** Quadro com os artigos incluídos na revisão (busca, revisão anterior e integrados) */
+export function tabelaIncluidos(r: RevisaoFonte, numero: number, varias: boolean): Bloco[] {
+  const l = r.incluidos ?? [];
+  if (!l.length) return [];
+  const ordem: Record<string, number> = { BUSCA: 0, MANUAL: 1, REVISAO_ANTERIOR: 2, INTEGRADO: 3 };
+  const linhas = [...l]
+    .sort(
+      (a, b) =>
+        (ordem[a.origem] ?? 9) - (ordem[b.origem] ?? 9) ||
+        autoriaCurta(a.autores, a.ano).localeCompare(autoriaCurta(b.autores, b.ano), 'pt-BR'),
+    )
+    .map((x, i) => [
+      String(i + 1),
+      autoriaCurta(x.autores, x.ano),
+      x.titulo,
+      x.periodico ?? '—',
+      x.origem === 'BUSCA'
+        ? `Busca${x.baseNome ? ` – ${x.baseNome}` : ''}`
+        : x.origem === 'REVISAO_ANTERIOR'
+          ? 'Revisão anterior'
+          : x.origem === 'INTEGRADO'
+            ? 'Integrado (outras fontes)'
+            : 'Inclusão manual',
+    ]);
+  const n = (o: string) => l.filter((x) => x.origem === o).length;
+  const partes = [
+    n('BUSCA') + n('MANUAL') ? `${n('BUSCA') + n('MANUAL')} selecionados nas buscas` : '',
+    n('REVISAO_ANTERIOR') ? `${n('REVISAO_ANTERIOR')} de revisão anterior` : '',
+    n('INTEGRADO') ? `${n('INTEGRADO')} integrados de outras fontes` : '',
+  ].filter(Boolean);
+  return [
+    {
+      tipo: 'p',
+      texto: `O Quadro ${numero} apresenta os ${l.length} artigos incluídos${varias ? ` na revisão "${r.titulo}"` : ''}: ${listaPt(partes)}.`,
+    },
+    {
+      tipo: 'tabela',
+      texto: `Quadro ${numero} – Artigos incluídos${varias ? ` (${r.titulo})` : ''}: selecionados na revisão e integrados`,
+      cabecalho: ['Nº', 'Autor(es) e ano', 'Título', 'Periódico', 'Origem'],
+      linhas,
+      fonte: `Fonte: elaborado pelos autores com os dados da revisão (${new Date().getFullYear()}).`,
+    },
+  ];
 }
 
 /** Metodologia do protocolo: tipo de pesquisa + descrição */
@@ -317,15 +452,31 @@ export function rascunhoInicial(f: FontesArtigo): DadosArtigo {
     introducao: { texto: '', incluir: ['questao', 'objetivoGeral', 'objetivos', 'justificativa', 'estrutura'] },
     fundamentacao: { texto: '', documentos: f.analisados.filter((d) => d.teorico).map((d) => d.id) },
     metodologia: { texto: textoMetodologia(f) },
-    revisao: { texto: textoRevisao(f) },
+    revisao: { texto: textoRevisao(f), tabela: true },
     analise: { texto: '', documentos: f.analisados.filter((d) => !d.teorico).map((d) => d.id) },
     discussao: { texto: '', itens: f.discussoes.map((d) => d.id) },
     conclusoes: { texto: '' },
     agradecimentos: { texto: modeloAgradecimentos(f.projeto.instituicao), fundacoes: '', capes: false },
     declaracaoIa: { usou: f.usosIa.length > 0, texto: modeloDeclaracaoIa(f.usosIa.length > 0, f.usosIa) },
+    declaracoes: Object.fromEntries(
+      DECLARACOES.map(([k]) => [
+        k,
+        {
+          incluir: true,
+          texto: modeloDeclaracao(
+            k,
+            f,
+            ordenarAutores(f).map((a) => a.nome),
+          ),
+        },
+      ]),
+    ) as DadosArtigo['declaracoes'],
     referencias: { estilo: 'ABNT', excluidas: [] },
+    destacarGerados: true,
   };
 }
+
+const ordenarAutores = (f: FontesArtigo) => [...f.autores].sort((a, b) => Number(b.principal) - Number(a.principal));
 
 /** Junta um rascunho salvo com o inicial (campos novos ganham o valor padrão) */
 export function completarRascunho(salvo: Partial<DadosArtigo> | null, f: FontesArtigo): DadosArtigo {
@@ -345,6 +496,9 @@ export function completarRascunho(salvo: Partial<DadosArtigo> | null, f: FontesA
     'referencias',
   ] as const)
     (d as Record<string, unknown>)[k] = { ...base[k], ...(salvo[k] ?? {}) };
+  d.declaracoes = Object.fromEntries(
+    DECLARACOES.map(([k]) => [k, { ...base.declaracoes[k], ...(salvo.declaracoes?.[k] ?? {}) }]),
+  ) as DadosArtigo['declaracoes'];
   // autores novos no projeto entram no fim; os que saíram do projeto somem
   const ids = new Set(f.autores.map((a) => a.usuarioId));
   const salvos = (salvo.autores ?? []).filter((a) => ids.has(a.usuarioId));
@@ -354,7 +508,24 @@ export function completarRascunho(salvo: Partial<DadosArtigo> | null, f: FontesA
 
 // ------------------------------------------------------------------ documento final (POST .../docx)
 
-export type Bloco = { tipo: 'p' | 'h3' | 'lista' | 'citacao' | 'ref' | 'nota'; texto?: string; itens?: string[] };
+export type Bloco = {
+  tipo: 'p' | 'h3' | 'lista' | 'citacao' | 'ref' | 'nota' | 'tabela';
+  texto?: string;
+  itens?: string[];
+  cabecalho?: string[];
+  linhas?: string[][];
+  fonte?: string;
+  /** montado pelo sistema e ainda não reescrito pelo autor: sai destacado no Word */
+  gerado?: boolean;
+};
+
+const chaveBloco = (b: Bloco) => `${b.tipo}|${b.texto ?? ''}|${(b.itens ?? []).join('|')}`;
+/** Marca como gerados os blocos iguais aos do texto que o sistema montou (o que o autor mudou deixa de ser) */
+function marcarIguais(blocos: Bloco[], geradoPeloSistema: string): Bloco[] {
+  const gerados = new Set(paragrafos(geradoPeloSistema).map(chaveBloco));
+  return blocos.map((b) => (gerados.has(chaveBloco(b)) ? { ...b, gerado: true } : b));
+}
+const gerado = (b: Bloco): Bloco => ({ ...b, gerado: true });
 export type DocumentoArtigo = {
   titulo: string;
   subtitulo?: string | null;
@@ -478,22 +649,30 @@ export function montarDocumento(d: DadosArtigo, f: FontesArtigo): DocumentoArtig
       titulo: 'Fundamentação teórica',
       blocos: [
         ...paragrafos(d.fundamentacao.texto),
-        ...docs(d.fundamentacao.documentos).map((x) => ({
-          tipo: 'p' as const,
-          texto: `${semPonto(x.resumoAssunto)} ${citacao(x.autores, x.ano)}.`,
-        })),
+        ...docs(d.fundamentacao.documentos).map((x) =>
+          gerado({ tipo: 'p', texto: `${semPonto(x.resumoAssunto)} ${citacao(x.autores, x.ano)}.` }),
+        ),
       ],
     },
-    { titulo: 'Metodologia', blocos: paragrafos(d.metodologia.texto) },
-    { titulo: 'Revisão de literatura', blocos: paragrafos(d.revisao.texto) },
+    { titulo: 'Metodologia', blocos: marcarIguais(paragrafos(d.metodologia.texto), textoMetodologia(f)) },
+    {
+      titulo: 'Revisão de literatura',
+      blocos: [
+        ...marcarIguais(paragrafos(d.revisao.texto), textoRevisao(f)),
+        ...(d.revisao.tabela
+          ? f.revisoes
+              .flatMap((r, i) => tabelaIncluidos(r, i + 1, f.revisoes.length > 1))
+              .map((b) => (b.tipo === 'p' ? gerado(b) : b))
+          : []),
+      ],
+    },
     {
       titulo: 'Análise',
       blocos: [
         ...paragrafos(d.analise.texto),
-        ...docs(d.analise.documentos).map((x) => ({
-          tipo: 'p' as const,
-          texto: `${semPonto(x.resumoAssunto)} ${citacao(x.autores, x.ano)}.`,
-        })),
+        ...docs(d.analise.documentos).map((x) =>
+          gerado({ tipo: 'p', texto: `${semPonto(x.resumoAssunto)} ${citacao(x.autores, x.ano)}.` }),
+        ),
       ],
     },
     {
@@ -504,6 +683,7 @@ export function montarDocumento(d: DadosArtigo, f: FontesArtigo): DocumentoArtig
           .filter((x) => d.discussao.itens.includes(x.id))
           .map((x) => ({
             tipo: 'p' as const,
+            gerado: true,
             texto: [
               x.pontoPrincipal ? comPonto(x.pontoPrincipal) : '',
               x.discussao ? semPonto(x.discussao) : '',
@@ -524,19 +704,28 @@ export function montarDocumento(d: DadosArtigo, f: FontesArtigo): DocumentoArtig
       d,
       f,
       corpo.map((s) => DESCRICAO_SECAO[s.titulo] ?? minuscula(s.titulo)),
-    ),
+    ).map(gerado),
   ];
   const numeradas = [...(intro.length ? [{ titulo: 'Introdução', blocos: intro }] : []), ...corpo];
   numeradas.forEach((s, i) => secoes.push({ titulo: `${i + 1} ${s.titulo}`, blocos: s.blocos }));
 
   // agradecimentos: troca o marcador pelas fundações informadas e acrescenta a frase da CAPES
   const fundacoes = d.agradecimentos.fundacoes.trim();
+  const trocar = (t: string) => t.split(MARCADOR_FUNDACOES).join(fundacoes || MARCADOR_FUNDACOES);
   const agradecimentos = [
-    ...paragrafos(d.agradecimentos.texto.split(MARCADOR_FUNDACOES).join(fundacoes || MARCADOR_FUNDACOES)),
+    ...marcarIguais(paragrafos(trocar(d.agradecimentos.texto)), trocar(modeloAgradecimentos(f.projeto.instituicao))),
     ...(d.agradecimentos.capes ? [{ tipo: 'p' as const, texto: FRASE_CAPES }] : []),
   ];
   if (agradecimentos.length) secoes.push({ titulo: 'Agradecimentos', blocos: agradecimentos });
-  const declaracao = paragrafos(d.declaracaoIa.texto);
+  // declarações da Portaria CNPq nº 2.664/2026
+  const nomes = autores.map((a) => a.nome);
+  for (const [k, titulo] of DECLARACOES) {
+    const x = d.declaracoes[k];
+    if (!x.incluir) continue;
+    const blocos = marcarIguais(paragrafos(x.texto), modeloDeclaracao(k, f, nomes));
+    if (blocos.length) secoes.push({ titulo, blocos });
+  }
+  const declaracao = marcarIguais(paragrafos(d.declaracaoIa.texto), modeloDeclaracaoIa(d.declaracaoIa.usou, f.usosIa));
   if (declaracao.length) secoes.push({ titulo: 'Declaração de uso de Inteligência Artificial', blocos: declaracao });
 
   const refs = f.referencias
@@ -547,5 +736,9 @@ export function montarDocumento(d: DadosArtigo, f: FontesArtigo): DocumentoArtig
   if (refs.length)
     secoes.push({ titulo: 'Referências', blocos: refs.map((texto) => ({ tipo: 'ref' as const, texto })) });
 
-  return { titulo: d.titulo.trim() || f.projeto.titulo, subtitulo: d.subtitulo.trim() || null, autores, secoes };
+  // sem destaque: tira a marca dos trechos gerados
+  const final = d.destacarGerados
+    ? secoes
+    : secoes.map((x) => ({ ...x, blocos: x.blocos.map(({ gerado: _g, ...b }) => b) }));
+  return { titulo: d.titulo.trim() || f.projeto.titulo, subtitulo: d.subtitulo.trim() || null, autores, secoes: final };
 }

@@ -9,6 +9,10 @@ import {
   rascunhoInicial,
   textoRevisao,
   type FontesArtigo,
+  autoriaCurta,
+  AVISO_TEXTO_BASE,
+  faseDoUso,
+  tabelaIncluidos,
 } from '../pages/projeto/artigoLogica';
 import { ehSugeridoPorSimilaridade, faixaNota, LIMIAR_SUGESTAO } from '../pages/revisao/similaridade';
 
@@ -83,6 +87,35 @@ const fontes: FontesArtigo = {
         totalOutrasFontes: 0,
         incluidos: { novos: 12, revisaoAnterior: 3, integrados: 0, total: 15 },
       },
+      incluidos: [
+        {
+          origem: 'INTEGRADO',
+          titulo: 'Integrado A',
+          autores: null,
+          ano: 2022,
+          periodico: null,
+          doi: null,
+          baseNome: null,
+        },
+        {
+          origem: 'BUSCA',
+          titulo: 'Artigo B',
+          autores: 'Amadi D, Banda JM.',
+          ano: 2024,
+          periodico: 'J Health',
+          doi: null,
+          baseNome: 'PubMed',
+        },
+        {
+          origem: 'REVISAO_ANTERIOR',
+          titulo: 'Anterior C',
+          autores: 'SILVA, João; SOUZA, Ana; LIMA, Rui',
+          ano: 2019,
+          periodico: 'Rev X',
+          doi: null,
+          baseNome: 'Scopus',
+        },
+      ],
     },
   ],
   analisados: [
@@ -199,6 +232,10 @@ describe('gerador de artigo', () => {
       '6 Discussão',
       '7 Conclusões',
       'Agradecimentos',
+      'Contribuição dos autores',
+      'Conflito de interesses',
+      'Disponibilidade dos dados',
+      'Divulgação prévia e originalidade',
       'Declaração de uso de Inteligência Artificial',
       'Referências',
     ]);
@@ -234,11 +271,12 @@ describe('gerador de artigo', () => {
   });
 
   it('seções vazias não entram e a numeração se ajusta', () => {
-    const d = rascunhoInicial({ ...fontes, revisoes: [], analisados: [], discussoes: [] });
+    const vazias = { ...fontes, revisoes: [], analisados: [], discussoes: [] };
+    const d = rascunhoInicial(vazias);
     d.introducao.incluir = [];
     d.metodologia.texto = '';
     d.conclusoes.texto = 'Fim.';
-    const titulos = montarDocumento(d, fontes).secoes.map((s) => s.titulo);
+    const titulos = montarDocumento(d, vazias).secoes.map((s) => s.titulo);
     expect(titulos.filter((t) => /^\d/.test(t))).toEqual(['1 Conclusões']);
   });
 
@@ -253,6 +291,76 @@ describe('gerador de artigo', () => {
       { usuarioId: 'u1', incluir: true },
     ]);
     expect(d.metodologia.texto).toContain('Design Science Research');
+  });
+});
+
+describe('artigo e a Portaria CNPq nº 2.664/2026', () => {
+  it('citação também no estilo Vancouver e autoria para tabela', () => {
+    expect(citacao('Amadi D, Kiwuwa-Muyingo S, Bhattacharjee T.', 2024)).toBe('(AMADI et al., 2024)');
+    expect(citacao('Banda JM.', 2019)).toBe('(BANDA, 2019)');
+    expect(autoriaCurta('SILVA, João; SOUZA, Ana', 2020)).toBe('SILVA; SOUZA (2020)');
+  });
+
+  it('quadro com os artigos incluídos: buscas, revisão anterior e integrados', () => {
+    const [intro, quadro] = tabelaIncluidos(fontes.revisoes[0], 1, false);
+    expect(intro.texto).toBe(
+      'O Quadro 1 apresenta os 3 artigos incluídos: 1 selecionados nas buscas, 1 de revisão anterior e 1 integrados de outras fontes.',
+    );
+    expect(quadro.tipo).toBe('tabela');
+    expect(quadro.cabecalho).toEqual(['Nº', 'Autor(es) e ano', 'Título', 'Periódico', 'Origem']);
+    expect(quadro.linhas).toEqual([
+      ['1', 'AMADI; BANDA (2024)', 'Artigo B', 'J Health', 'Busca – PubMed'],
+      ['2', 'SILVA et al. (2019)', 'Anterior C', 'Rev X', 'Revisão anterior'],
+      ['3', 'Autor desconhecido (2022)', 'Integrado A', '—', 'Integrado (outras fontes)'],
+    ]);
+    const doc = montarDocumento(rascunhoInicial(fontes), fontes);
+    const revisao = doc.secoes.find((x) => x.titulo.endsWith('Revisão de literatura'))!;
+    expect(revisao.blocos.some((b) => b.tipo === 'tabela')).toBe(true);
+    const sem = rascunhoInicial(fontes);
+    sem.revisao.tabela = false;
+    expect(
+      montarDocumento(sem, fontes)
+        .secoes.find((x) => x.titulo.endsWith('Revisão de literatura'))!
+        .blocos.some((b) => b.tipo === 'tabela'),
+    ).toBe(false);
+  });
+
+  it('trechos montados pelo sistema saem marcados até o autor reescrever', () => {
+    const d = rascunhoInicial(fontes);
+    const secao = (doc: ReturnType<typeof montarDocumento>, t: string) => doc.secoes.find((x) => x.titulo.endsWith(t))!;
+    let doc = montarDocumento(d, fontes);
+    expect(secao(doc, 'Metodologia').blocos.every((b) => b.gerado)).toBe(true);
+    expect(secao(doc, 'Fundamentação teórica').blocos.every((b) => b.gerado)).toBe(true);
+    expect(secao(doc, 'Declaração de uso de Inteligência Artificial').blocos.every((b) => b.gerado)).toBe(true);
+    // o autor reescreveu o primeiro parágrafo da metodologia: ele deixa de ser marcado
+    d.metodologia.texto = d.metodologia.texto.replace('Trata-se de uma pesquisa do tipo', 'Adotou-se a abordagem');
+    d.introducao.texto = 'Meu texto.';
+    doc = montarDocumento(d, fontes);
+    expect(secao(doc, 'Metodologia').blocos.map((b) => !!b.gerado)).toEqual([false, true]);
+    expect(secao(doc, 'Introdução').blocos[0].gerado).toBeUndefined();
+    // a tabela nunca é marcada; sem destaque, nada é marcado
+    expect(secao(doc, 'Revisão de literatura').blocos.find((b) => b.tipo === 'tabela')!.gerado).toBeUndefined();
+    d.destacarGerados = false;
+    expect(
+      montarDocumento(d, fontes)
+        .secoes.flatMap((x) => x.blocos)
+        .some((b) => b.gerado),
+    ).toBe(false);
+  });
+
+  it('declarações seguem a portaria: fase do uso de IA, autoria, dados e textos-base', () => {
+    expect(faseDoUso('Gerar: resumo do assunto')).toBe('análise de dados');
+    expect(faseDoUso('Melhorar: justificativa')).toBe('concepção');
+    expect(faseDoUso('Traduzir: resumo')).toBe('redação (tradução)');
+    const ia = modeloDeclaracaoIa(true, fontes.usosIa);
+    expect(ia).toContain('fase: análise de dados; finalidade: gerar: resumo do assunto');
+    expect(ia).toContain('reescritos pelos autores com suas próprias palavras');
+    expect(ia).toContain('fora do Konektron Research');
+    const d = rascunhoInicial(fontes);
+    expect(d.declaracoes.contribuicao.texto).toContain('- Ivam Galvão: [');
+    expect(d.declaracoes.dados.texto).toContain('[informe o repositório');
+    expect(AVISO_TEXTO_BASE).toContain('servem apenas como base para revisão');
+    expect(AVISO_TEXTO_BASE).toContain('art. 9º, I, “d”');
   });
 });
 

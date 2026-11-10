@@ -967,3 +967,8 @@ html[data-k-contraste] {
     opacity: 1;
   }
 }
+
+// gerador de artigo: aviso de texto-base (não oficial, para reescrever)
+.k-texto-base {
+  color: var(--bs-warning-text-emphasis);
+}
