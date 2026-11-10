@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { faixaNota, LIMIAR_PADRAO, textoDoPerfil, type Similaridade, type TrechoPerfil } from './similaridade';
+import { faixaNota, LIMIAR_SUGESTAO, textoDoPerfil, type Similaridade, type TrechoPerfil } from './similaridade';
 
 const chavePerfil = (projetoId: string) => `konektron:perfil-similaridade:${projetoId}`;
-const chaveLimiar = (projetoId: string) => `konektron:limiar-similaridade:${projetoId}`;
 
 /** Perfil ajustado pelo usuário (fica neste navegador); null = o calculado do protocolo */
 export function lerPerfilAjustado(projetoId: string): string | null {
@@ -20,28 +19,22 @@ function gravar(chave: string, valor: string | null) {
     // sem armazenamento: vale só nesta sessão
   }
 }
-export function lerLimiar(projetoId: string): number {
-  try {
-    const v = Number(localStorage.getItem(chaveLimiar(projetoId)));
-    return v > 0 && v <= 1 ? v : LIMIAR_PADRAO;
-  } catch {
-    return LIMIAR_PADRAO;
-  }
-}
 
 export const formatarNota = (n: number) => n.toFixed(2).replace('.', ',');
 
-/** Nota de similaridade no item da lista: verde a partir do limiar */
-export function NotaSimilaridade({ s, limiar }: { s: Similaridade; limiar: number }) {
-  const faixa = faixaNota(s.nota, limiar);
-  const classe =
-    faixa === 'alta'
-      ? 'text-bg-success'
-      : faixa === 'media'
-        ? 'bg-success-subtle text-success-emphasis border border-success-subtle'
-        : 'bg-body-secondary text-body-secondary border';
+/** Nota de similaridade no item da lista: verde só a partir de 0,70 (sugestão de seleção) */
+export function NotaSimilaridade({ s }: { s: Similaridade }) {
+  const alta = faixaNota(s.nota) === 'alta';
+  const classe = alta ? 'text-bg-success' : 'bg-body-secondary text-body-secondary border';
   return (
-    <span className={`badge ${classe}`} title="Similaridade com o tema da pesquisa (0 a 1)">
+    <span
+      className={`badge ${classe}`}
+      title={
+        alta
+          ? 'Similaridade com o tema ≥ 0,70: sugerido para seleção'
+          : 'Similaridade com o tema abaixo de 0,70: sem sugestão'
+      }
+    >
       <i className="bi bi-bullseye me-1" aria-hidden="true" />
       <span className="visually-hidden">Similaridade </span>
       {formatarNota(s.nota)}
@@ -56,8 +49,6 @@ export function PainelSimilaridade({
   perfilAuto,
   perfilAjustado,
   aoAjustarPerfil,
-  limiar,
-  aoMudarLimiar,
   total,
   acima,
   ordenar,
@@ -71,8 +62,6 @@ export function PainelSimilaridade({
   perfilAuto: TrechoPerfil[];
   perfilAjustado: string | null;
   aoAjustarPerfil: (v: string | null) => void;
-  limiar: number;
-  aoMudarLimiar: (v: number) => void;
   total: number;
   acima: number;
   ordenar: boolean;
@@ -96,7 +85,8 @@ export function PainelSimilaridade({
       <div className="d-flex flex-wrap align-items-center gap-2">
         <i className="bi bi-bullseye text-success" aria-hidden="true" />
         <span className="me-auto" role="status">
-          <strong>{acima}</strong> de {total} com similaridade ≥ {formatarNota(limiar)} com o tema
+          <strong>{acima}</strong> de {total} com similaridade ≥ {formatarNota(LIMIAR_SUGESTAO)} com o tema (sugeridos
+          para seleção)
         </span>
         {aoMarcar && acima > 0 && (
           <button type="button" className="btn btn-outline-success btn-sm py-0" onClick={aoMarcar}>
@@ -105,26 +95,6 @@ export function PainelSimilaridade({
         )}
       </div>
       <div className="d-flex flex-wrap align-items-center gap-3 mt-1">
-        <label className="d-flex align-items-center gap-1 mb-0" htmlFor={`limiar-${etapaId}`}>
-          Limiar
-          <input
-            id={`limiar-${etapaId}`}
-            type="number"
-            className="form-control form-control-sm"
-            style={{ width: 72 }}
-            min={0.05}
-            max={1}
-            step={0.05}
-            value={limiar}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (v > 0 && v <= 1) {
-                aoMudarLimiar(v);
-                gravar(chaveLimiar(projetoId), String(v));
-              }
-            }}
-          />
-        </label>
         <div className="form-check mb-0">
           <input
             id={`ordenar-sim-${etapaId}`}
@@ -146,16 +116,21 @@ export function PainelSimilaridade({
             onChange={(e) => aoSoSimilares(e.target.checked)}
           />
           <label className="form-check-label" htmlFor={`so-similares-${etapaId}`}>
-            Só os acima do limiar
+            Só os com nota ≥ {formatarNota(LIMIAR_SUGESTAO)}
           </label>
         </div>
       </div>
+      <p className="text-secondary mt-1 mb-0">
+        <i className="bi bi-info-circle me-1" aria-hidden="true" />
+        Só são sugeridos os documentos com nota ≥ {formatarNota(LIMIAR_SUGESTAO)}. A sugestão não decide nada: você pode
+        selecionar ou excluir qualquer documento pelo seu julgamento, inclusive os de nota menor.
+      </p>
       <details className="mt-1">
         <summary>Resumo do protocolo usado na comparação{perfilAjustado !== null ? ' (ajustado)' : ''}</summary>
         <p className="text-secondary mt-1 mb-1">
           Cada documento (título, resumo e palavras-chave) é comparado com este resumo pela similaridade do cosseno
-          entre vetores TF-IDF, calculada aqui no navegador, sem custo. A nota vai de 0 a 1; a partir do limiar fica em
-          verde. É só uma sugestão: a decisão é do revisor.
+          entre vetores TF-IDF, calculada aqui no navegador, sem custo. A nota vai de 0 a 1; a partir de 0,70 fica em
+          verde e o documento é sugerido. É só uma sugestão: a decisão é do revisor.
         </p>
         {editando !== null ? (
           <>

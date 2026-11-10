@@ -61,6 +61,8 @@ export function VisaoGeral() {
               )}
             </div>
             <dl className="row mb-0">
+              <dt className="col-sm-3">Subtítulo</dt>
+              <dd className="col-sm-9">{p.subtitulo || '—'}</dd>
               <dt className="col-sm-3">Área</dt>
               <dd className="col-sm-9">{p.area || '—'}</dd>
               <dt className="col-sm-3">Instituição</dt>
