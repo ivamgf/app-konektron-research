@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout, RequerAdmin } from './components/Layout';
-import { Carregando } from './components/ui';
+import { TelaCarregando } from './components/ui';
 import { Login } from './pages/auth/Login';
 import { EsqueciSenha, RedefinirSenha } from './pages/auth/Senha';
 import { ConfirmarEmail } from './pages/auth/ConfirmarEmail';
@@ -40,7 +40,7 @@ export function App() {
   return (
     <>
       <TituloDaPagina />
-      <Suspense fallback={<Carregando />}>
+      <Suspense fallback={<TelaCarregando texto="Carregando…" />}>
         <Routes>
           {/* páginas abertas: apresentação e aviso de cadastro (as contas são criadas pela OrkneyTech) */}
           <Route path="/" element={<Inicio />} />

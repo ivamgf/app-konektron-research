@@ -4,9 +4,47 @@ import { corDaSituacao, ICONE_SITUACAO, rotulo } from '../lib/formato';
 
 export function Carregando({ texto = 'Carregando…' }: { texto?: string }) {
   return (
-    <div className="d-flex align-items-center gap-2 text-secondary py-4" role="status">
-      <span className="spinner-border spinner-border-sm" aria-hidden="true" />
+    <div className="d-flex justify-content-center align-items-center gap-2 text-secondary py-5" role="status">
+      <span className="spinner-border spinner-border-sm text-primary" aria-hidden="true" />
       <span>{texto}</span>
+    </div>
+  );
+}
+
+/** Tela cheia ao abrir o app: logo no centro de um spinner do Bootstrap, nome e mensagem, centralizados */
+export function TelaCarregando({ texto = 'Abrindo o Konektron Research…' }: { texto?: string }) {
+  return (
+    <div
+      className="min-vh-100 d-flex flex-column justify-content-center align-items-center gap-4 bg-body-tertiary px-3 text-center"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className="position-relative d-flex justify-content-center align-items-center"
+        style={{ width: 128, height: 128 }}
+      >
+        <span
+          className="spinner-border text-primary position-absolute top-0 start-0"
+          style={{ width: 128, height: 128, borderWidth: 6 }}
+          aria-hidden="true"
+        />
+        <img
+          src="/brand/konektron.png"
+          alt=""
+          width={76}
+          height={76}
+          className="rounded-circle bg-body shadow-sm p-1"
+        />
+      </div>
+      <div>
+        <div className="fs-4 fw-bold notranslate" translate="no">
+          KoneKtron <span className="text-primary">Research</span>
+        </div>
+        <div className="text-secondary">{texto}</div>
+      </div>
+      <div className="progress w-100" style={{ maxWidth: 240, height: 4 }} aria-hidden="true">
+        <div className="progress-bar progress-bar-striped progress-bar-animated w-100" />
+      </div>
     </div>
   );
 }

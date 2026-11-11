@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { LayoutPublico } from './LayoutPublico';
+import { CartoesPlanos, SeletorCiclo } from '../../components/CartoesPlanos';
+import type { Ciclo } from '../../lib/assinatura';
 
 const PASSOS = [
   {
@@ -42,7 +45,7 @@ const RECURSOS = [
   {
     icone: 'bi-journal-text',
     titulo: 'Documentos e referências',
-    texto: 'Cadastro manual ou por importação, PDF anexo e referências nas normas NBR e APA.',
+    texto: 'Cadastro manual ou por importação, PDF anexo e referências em ABNT, APA, MLA, Chicago, Vancouver e IEEE.',
   },
   {
     icone: 'bi-table',
@@ -75,6 +78,7 @@ const NUMEROS = [
 /** Página inicial aberta: apresenta o Konektron Research antes do login */
 export function Inicio() {
   const { usuario } = useAuth();
+  const [ciclo, setCiclo] = useState<Ciclo>('MENSAL');
 
   return (
     <LayoutPublico>
@@ -110,9 +114,12 @@ export function Inicio() {
                     <Link to="/login" className="btn btn-laranja btn-lg fw-bold px-4">
                       Entrar <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
                     </Link>
-                    <Link to="/registrar" className="btn btn-outline-light btn-lg px-4">
-                      Cadastrar
+                    <Link to="/registrar?plano=FREE" className="btn btn-outline-light btn-lg px-4">
+                      Criar conta grátis
                     </Link>
+                    <a href="#planos" className="btn btn-link link-light btn-lg px-2">
+                      Ver planos
+                    </a>
                   </>
                 )}
               </div>
@@ -185,6 +192,42 @@ export function Inicio() {
           </div>
         </section>
 
+        <section className="k-home-faixa" id="planos" aria-labelledby="k-home-planos">
+          <div className="container-xl px-3">
+            <div className="text-center mb-4">
+              <h2 className="k-home-secao" id="k-home-planos">
+                Planos
+              </h2>
+              <p className="k-home-sub mb-3">
+                Comece grátis e faça o upgrade quando a pesquisa crescer. Pagamento por Pix, boleto ou cartão.
+              </p>
+              <SeletorCiclo ciclo={ciclo} aoMudar={setCiclo} />
+            </div>
+            <CartoesPlanos
+              ciclo={ciclo}
+              nivelTitulo={3}
+              acao={(p) => {
+                const pago = p.id !== 'FREE';
+                const classe = `btn w-100 ${p.destaque ? 'btn-primary' : 'btn-outline-primary'}`;
+                if (usuario)
+                  return (
+                    <Link to={pago ? `/planos?assinar=${p.id}&ciclo=${ciclo}` : '/planos'} className={classe}>
+                      {pago ? `Assinar o ${p.nome}` : 'Ver meu plano'}
+                    </Link>
+                  );
+                return (
+                  <Link to={`/registrar?plano=${p.id}&ciclo=${ciclo}`} className={classe}>
+                    {pago ? `Cadastrar e assinar o ${p.nome}` : 'Cadastrar grátis'}
+                  </Link>
+                );
+              }}
+            />
+            <p className="small text-secondary text-center mb-0">
+              Estudantes têm 20% de desconto no Standard. <Link to="/planos">Detalhes dos planos</Link>
+            </p>
+          </div>
+        </section>
+
         <div className="container-xl px-3 py-5">
           <section
             className="k-home-cta p-4 p-md-5 d-flex flex-wrap align-items-center justify-content-between gap-3"
@@ -192,12 +235,12 @@ export function Inicio() {
           >
             <div className="position-relative">
               <h2 className="h3 text-white mb-1" id="k-home-acesso">
-                {usuario ? `Bem-vindo de volta, ${usuario.nome.split(' ')[0]}` : 'Acesso para pesquisadores'}
+                {usuario ? `Bem-vindo de volta, ${usuario.nome.split(' ')[0]}` : 'Comece sua pesquisa hoje'}
               </h2>
               <p className="mb-0">
                 {usuario
                   ? 'Seus projetos estão esperando por você.'
-                  : 'As contas são criadas pela equipe da OrkneyTech. Já tem acesso? É só entrar.'}
+                  : 'Crie sua conta grátis em um minuto. Já tem conta? É só entrar.'}
               </p>
             </div>
             <div className="d-flex flex-wrap gap-2 position-relative">
@@ -210,8 +253,8 @@ export function Inicio() {
                   <Link to="/login" className="btn btn-light btn-lg fw-bold">
                     Entrar
                   </Link>
-                  <Link to="/registrar" className="btn btn-outline-light btn-lg">
-                    Como obter acesso
+                  <Link to="/registrar?plano=FREE" className="btn btn-outline-light btn-lg">
+                    Criar conta grátis
                   </Link>
                 </>
               )}
