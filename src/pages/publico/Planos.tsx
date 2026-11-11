@@ -35,10 +35,11 @@ export default function Planos() {
   const [assinando, setAssinando] = useState<PlanoPago | null>(null);
   const pedidoAberto = useRef(false);
   useEffect(() => {
-    if (pedidoAberto.current || !usuario || (pedido !== 'STANDARD' && pedido !== 'MASTER')) return;
+    if (pedidoAberto.current || !usuario || !assin.data || assin.data.isento) return;
+    if (pedido !== 'STANDARD' && pedido !== 'MASTER') return;
     pedidoAberto.current = true;
     setAssinando(pedido);
-  }, [usuario, pedido]);
+  }, [usuario, pedido, assin.data]);
   const precos = assin.data?.precos;
   const valorDe = (id: string, base: number | null) =>
     base === null ? null : (precos?.[id as PlanoPago]?.[ciclo] ?? base);
@@ -63,6 +64,13 @@ export default function Planos() {
           </div>
         )}
 
+        {assin.data?.isento && (
+          <div className="alert alert-success text-center" role="status">
+            <i className="bi bi-patch-check-fill me-1" aria-hidden="true" />
+            Sua conta tem o plano <strong>Master</strong> sem cobrança. Não é preciso assinar.
+          </div>
+        )}
+
         {assin.data && <MinhaAssinatura d={assin.data} />}
 
         <CartoesPlanos
@@ -80,7 +88,7 @@ export default function Planos() {
                   Começar grátis
                 </Link>
               )
-            ) : usuario ? (
+            ) : usuario && (!assin.data || assin.data.isento) ? null : usuario ? (
               <button
                 type="button"
                 className={`btn w-100 ${p.destaque ? 'btn-primary' : 'btn-outline-primary'}`}
