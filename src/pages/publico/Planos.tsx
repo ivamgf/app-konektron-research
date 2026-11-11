@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../auth/AuthProvider';
 import { lerErro, post } from '../../lib/api';
@@ -16,7 +16,8 @@ import {
 } from '../../lib/assinatura';
 import { EMAIL_ORKNEYTECH, linkPedidoPlano } from '../../lib/contato';
 import { data } from '../../lib/formato';
-import { chavePlano, NOME_RECURSO, nomePlano, PLANOS, preco, tamanho, usePlano } from '../../lib/planos';
+import { chavePlano, nomePlano, PLANOS, preco, tamanho, usePlano } from '../../lib/planos';
+import { CartoesPlanos, SeletorCiclo } from '../../components/CartoesPlanos';
 import { BotaoConfirmar, ErroAlerta, Modal } from '../../components/ui';
 import { LayoutPublico } from './LayoutPublico';
 
@@ -27,8 +28,17 @@ export default function Planos() {
   const { usuario } = useAuth();
   const atual = usePlano(!!usuario);
   const assin = useAssinatura(!!usuario);
-  const [ciclo, setCiclo] = useState<Ciclo>('MENSAL');
+  // ?assinar=MASTER&ciclo=ANUAL: vindo do cadastro ou do login, já abre a assinatura do plano escolhido
+  const [params] = useSearchParams();
+  const pedido = params.get('assinar');
+  const [ciclo, setCiclo] = useState<Ciclo>(params.get('ciclo') === 'ANUAL' ? 'ANUAL' : 'MENSAL');
   const [assinando, setAssinando] = useState<PlanoPago | null>(null);
+  const pedidoAberto = useRef(false);
+  useEffect(() => {
+    if (pedidoAberto.current || !usuario || (pedido !== 'STANDARD' && pedido !== 'MASTER')) return;
+    pedidoAberto.current = true;
+    setAssinando(pedido);
+  }, [usuario, pedido]);
   const precos = assin.data?.precos;
   const valorDe = (id: string, base: number | null) =>
     base === null ? null : (precos?.[id as PlanoPago]?.[ciclo] ?? base);
@@ -39,19 +49,7 @@ export default function Planos() {
         <div className="text-center mb-4">
           <h1 className="k-home-secao mb-2">Planos</h1>
           <p className="k-home-sub mb-3">Escolha o plano que acompanha o tamanho da sua pesquisa.</p>
-          <div className="btn-group" role="group" aria-label="Ciclo de pagamento">
-            {(['MENSAL', 'ANUAL'] as const).map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={`btn ${ciclo === c ? 'btn-primary' : 'btn-outline-primary'}`}
-                aria-pressed={ciclo === c}
-                onClick={() => setCiclo(c)}
-              >
-                {c === 'MENSAL' ? 'Mensal' : 'Anual (2 meses grátis)'}
-              </button>
-            ))}
-          </div>
+          <SeletorCiclo ciclo={ciclo} aoMudar={setCiclo} />
         </div>
 
         {atual.data && (
@@ -67,118 +65,48 @@ export default function Planos() {
 
         {assin.data && <MinhaAssinatura d={assin.data} />}
 
-        <ul className="row g-4 list-unstyled mb-4">
-          {PLANOS.map((p) => {
-            const valor = valorDe(p.id, ciclo === 'MENSAL' ? p.mensal : p.anual);
-            const cheio = ciclo === 'MENSAL' ? p.mensal : p.anual;
-            const ehAtual = atual.data?.plano === p.id;
-            return (
-              <li className="col-md-6 col-xl-3" key={p.id}>
-                <div className={`card h-100 shadow-sm ${p.destaque ? 'border-primary border-2' : ''}`}>
-                  <div className="card-body d-flex flex-column p-4">
-                    <div className="d-flex align-items-center gap-2 mb-1">
-                      <h2 className="h4 mb-0">{p.nome}</h2>
-                      {p.destaque && <span className="badge text-bg-primary">Completo</span>}
-                      {ehAtual && <span className="badge text-bg-success ms-auto">Seu plano</span>}
-                    </div>
-                    <p className="text-secondary small">{p.resumo}</p>
-                    <div className="mb-3">
-                      {valor === null ? (
-                        <span className="fs-2 fw-bold">Grátis</span>
-                      ) : (
-                        <>
-                          {cheio !== null && valor < cheio && (
-                            <div className="small text-secondary text-decoration-line-through">{preco(cheio)}</div>
-                          )}
-                          <span className="fs-2 fw-bold">{preco(valor)}</span>
-                          <span className="text-secondary">/{ciclo === 'MENSAL' ? 'mês' : 'ano'}</span>
-                          {ciclo === 'ANUAL' && (
-                            <div className="small text-secondary">equivale a {preco(valor / 12)}/mês</div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <ul className="list-unstyled small mb-3">
-                      {p.inclui.map((t) => (
-                        <li key={t} className="d-flex gap-2 mb-1">
-                          <i className="bi bi-check-lg text-success" aria-hidden="true" />
-                          {t}
-                        </li>
-                      ))}
-                      {p.naoInclui.map((r) => (
-                        <li key={r} className="d-flex gap-2 mb-1 text-secondary">
-                          <i className="bi bi-x-lg" aria-hidden="true" />
-                          <span>
-                            <span className="visually-hidden">Não inclui: </span>
-                            {NOME_RECURSO[r]}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-auto">
-                      {ehAtual ? (
-                        <button type="button" className="btn btn-outline-secondary w-100" disabled>
-                          Plano atual
-                        </button>
-                      ) : p.id === 'FREE' ? (
-                        !usuario && (
-                          <Link to="/registrar" className="btn btn-outline-primary w-100">
-                            Começar grátis
-                          </Link>
-                        )
-                      ) : usuario ? (
-                        <button
-                          type="button"
-                          className={`btn w-100 ${p.destaque ? 'btn-primary' : 'btn-outline-primary'}`}
-                          onClick={() => setAssinando(p.id as PlanoPago)}
-                        >
-                          Assinar o {p.nome}
-                        </button>
-                      ) : (
-                        <Link
-                          to="/login"
-                          state={{ de: '/planos' }}
-                          className={`btn w-100 ${p.destaque ? 'btn-primary' : 'btn-outline-primary'}`}
-                        >
-                          Entrar para assinar
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-          <li className="col-md-6 col-xl-3">
-            <div className="card h-100 shadow-sm bg-body-tertiary">
-              <div className="card-body d-flex flex-column p-4">
-                <h2 className="h4 mb-1">Institucional</h2>
-                <p className="text-secondary small">Para laboratórios, grupos de pesquisa e programas de pós.</p>
-                <div className="mb-3">
-                  <span className="fs-4 fw-bold">Sob consulta</span>
-                </div>
-                <ul className="list-unstyled small mb-3">
-                  {[
-                    'Várias contas Master num só contrato',
-                    'Cobrança anual por instituição, com nota fiscal',
-                    'Implantação e treinamento da equipe',
-                  ].map((t) => (
-                    <li key={t} className="d-flex gap-2 mb-1">
-                      <i className="bi bi-check-lg text-success" aria-hidden="true" />
-                      {t}
-                    </li>
-                  ))}
-                </ul>
-                <a
-                  className="btn btn-outline-primary w-100 mt-auto"
-                  href={`mailto:${EMAIL_ORKNEYTECH}?subject=${encodeURIComponent('Plano Institucional do Konektron Research')}`}
+        <CartoesPlanos
+          ciclo={ciclo}
+          valorDe={valorDe}
+          planoAtual={atual.data?.plano}
+          acao={(p) =>
+            atual.data?.plano === p.id ? (
+              <button type="button" className="btn btn-outline-secondary w-100" disabled>
+                Plano atual
+              </button>
+            ) : p.id === 'FREE' ? (
+              !usuario && (
+                <Link to="/registrar?plano=FREE" className="btn btn-outline-primary w-100">
+                  Começar grátis
+                </Link>
+              )
+            ) : usuario ? (
+              <button
+                type="button"
+                className={`btn w-100 ${p.destaque ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => setAssinando(p.id as PlanoPago)}
+              >
+                Assinar o {p.nome}
+              </button>
+            ) : (
+              <>
+                <Link
+                  to={`/registrar?plano=${p.id}&ciclo=${ciclo}`}
+                  className={`btn w-100 ${p.destaque ? 'btn-primary' : 'btn-outline-primary'}`}
                 >
-                  Falar com a equipe
-                </a>
-              </div>
-            </div>
-          </li>
-        </ul>
+                  Criar conta e assinar
+                </Link>
+                <Link
+                  to="/login"
+                  state={{ de: `/planos?assinar=${p.id}&ciclo=${ciclo}` }}
+                  className="d-block text-center small mt-2"
+                >
+                  Já tenho conta<span className="visually-hidden"> e quero assinar o {p.nome}</span>
+                </Link>
+              </>
+            )
+          }
+        />
         <p className="small text-secondary text-center mb-1">
           <i className="bi bi-mortarboard me-1" aria-hidden="true" />
           Estudante? Há 20% de desconto no Standard: escreva para{' '}

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
 import { get } from '../lib/api';
 import type { Notificacao } from '../lib/tipos';
-import { Carregando } from './ui';
+import { TelaCarregando } from './ui';
 import { SeletorIdioma } from './SeletorIdioma';
 import { LinkAcessibilidade } from './Acessibilidade';
 import { usePlano } from '../lib/planos';
@@ -91,7 +91,7 @@ export function Layout() {
 
   const plano = usePlano(!!usuario);
 
-  if (carregando) return <Carregando texto="Abrindo o Konektron Research…" />;
+  if (carregando) return <TelaCarregando />;
   if (!usuario) return <Navigate to="/login" replace state={{ de: local.pathname + local.search }} />;
 
   const qtd = naoLidas.data?.length ?? 0;
