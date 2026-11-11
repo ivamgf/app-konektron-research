@@ -3,10 +3,11 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useAuth } from '../../auth/AuthProvider';
 import { get, patch } from '../../lib/api';
 import { data } from '../../lib/formato';
-import type { Pagina, Usuario } from '../../lib/tipos';
+import type { Pagina, UsuarioAdmin } from '../../lib/tipos';
+import { nomePlano, PLANOS, type Plano } from '../../lib/planos';
 import { Cabecalho, Carregando, ErroAlerta, Paginacao } from '../../components/ui';
 
-/** RF03: ativar, bloquear e redefinir o perfil dos usuários */
+/** RF03: ativar, bloquear e redefinir o perfil e o plano dos usuários */
 export default function Usuarios() {
   const { usuario: eu } = useAuth();
   const qc = useQueryClient();
@@ -15,12 +16,21 @@ export default function Usuarios() {
   const [q, setQ] = useState('');
   const lista = useQuery({
     queryKey: ['admin', 'usuarios', page, q],
-    queryFn: () => get<Pagina<Usuario>>('/admin/usuarios', { page, pageSize: 25, q: q || undefined }),
+    queryFn: () => get<Pagina<UsuarioAdmin>>('/admin/usuarios', { page, pageSize: 25, q: q || undefined }),
     placeholderData: keepPreviousData,
   });
   const alterar = useMutation({
-    mutationFn: ({ id, ...d }: { id: string; ativo?: boolean; perfilGlobal?: string }) =>
-      patch(`/admin/usuarios/${id}`, d),
+    mutationFn: ({
+      id,
+      ...d
+    }: {
+      id: string;
+      ativo?: boolean;
+      perfilGlobal?: string;
+      plano?: Plano;
+      planoVitalicio?: boolean;
+      descontoEstudante?: boolean;
+    }) => patch(`/admin/usuarios/${id}`, d),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'usuarios'] }),
   });
   return (
@@ -58,6 +68,7 @@ export default function Usuarios() {
                 <th>E-mail confirmado</th>
                 <th>Cadastro</th>
                 <th>Perfil</th>
+                <th>Plano</th>
                 <th>Situação</th>
               </tr>
             </thead>
@@ -92,6 +103,62 @@ export default function Usuarios() {
                         <option value="USUARIO">Usuário</option>
                         <option value="ADMIN">Administrador</option>
                       </select>
+                    </td>
+                    <td style={{ minWidth: 190 }}>
+                      {u.perfilGlobal === 'ADMIN' ? (
+                        <span className="badge text-bg-primary">Master (administrador)</span>
+                      ) : (
+                        <>
+                          <select
+                            className="form-select form-select-sm w-auto"
+                            aria-label={`Plano de ${u.nome}`}
+                            disabled={alterar.isPending}
+                            value={u.plano}
+                            onChange={(e) => alterar.mutate({ id: u.id, plano: e.target.value as Plano })}
+                          >
+                            {PLANOS.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.nome}
+                              </option>
+                            ))}
+                          </select>
+                          {/* opção interna: o plano escolhido não expira nem é cobrado (não aparece para o usuário) */}
+                          <div className="form-check small mt-1 mb-0">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              id={`vitalicio-${u.id}`}
+                              disabled={alterar.isPending}
+                              checked={u.planoVitalicio}
+                              onChange={(e) => alterar.mutate({ id: u.id, planoVitalicio: e.target.checked })}
+                            />
+                            <label className="form-check-label" htmlFor={`vitalicio-${u.id}`}>
+                              Vitalício (interno)
+                            </label>
+                          </div>
+                          {/* opção interna: 20% de desconto no Standard (comprovante de matrícula) */}
+                          <div className="form-check small mb-0">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              id={`estudante-${u.id}`}
+                              disabled={alterar.isPending}
+                              checked={u.descontoEstudante}
+                              onChange={(e) => alterar.mutate({ id: u.id, descontoEstudante: e.target.checked })}
+                            />
+                            <label className="form-check-label" htmlFor={`estudante-${u.id}`}>
+                              Estudante (20% no Standard)
+                            </label>
+                          </div>
+                          <div className="small text-secondary">
+                            {u.projetosCriados} projeto(s)
+                            {u.planoBloqueadoEm && <span className="text-danger"> · bloqueado pelo plano</span>}
+                            {!u.planoBloqueadoEm &&
+                              u.planoExpiraEm &&
+                              ` · ${nomePlano(u.plano)} expira em ${data(u.planoExpiraEm)}`}
+                          </div>
+                        </>
+                      )}
                     </td>
                     <td>
                       <div className="form-check form-switch">

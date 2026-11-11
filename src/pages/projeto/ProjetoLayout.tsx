@@ -4,6 +4,7 @@ import { useProjeto } from '../../lib/consultas';
 import { ehDono, podeEditar, rotulo } from '../../lib/formato';
 import type { Projeto } from '../../lib/tipos';
 import { Carregando, ErroAlerta } from '../../components/ui';
+import { NOME_RECURSO, temRecurso, type Recurso } from '../../lib/planos';
 
 type Ctx = { projeto: Projeto; papel: string; edita: boolean; dono: boolean };
 const ProjetoContext = createContext<Ctx | null>(null);
@@ -14,17 +15,17 @@ export function useProjetoAtual() {
   return ctx;
 }
 
-const ABAS = [
+const ABAS: { para: string; texto: string; icone: string; recurso?: Recurso }[] = [
   { para: '', texto: 'Visão geral', icone: 'bi-house' },
   { para: 'protocolo', texto: 'Protocolo', icone: 'bi-clipboard-check' },
-  { para: 'questoes', texto: 'Questões', icone: 'bi-question-circle' },
+  { para: 'questoes', texto: 'Questões', icone: 'bi-question-circle', recurso: 'QUESTOES' },
   { para: 'criterios', texto: 'Critérios', icone: 'bi-funnel' },
   { para: 'documentos', texto: 'Documentos', icone: 'bi-file-earmark-text' },
   { para: 'referencias', texto: 'Referências', icone: 'bi-bookmarks' },
   { para: 'revisoes', texto: 'Revisões', icone: 'bi-journal-text' },
-  { para: 'analises', texto: 'Análises', icone: 'bi-clipboard-data' },
+  { para: 'analises', texto: 'Análises', icone: 'bi-clipboard-data', recurso: 'ANALISES' },
   { para: 'membros', texto: 'Membros', icone: 'bi-people' },
-  { para: 'artigo', texto: 'Artigo', icone: 'bi-file-earmark-word' },
+  { para: 'artigo', texto: 'Artigo', icone: 'bi-file-earmark-word', recurso: 'ARTIGO' },
 ];
 
 export function ProjetoLayout() {
@@ -66,10 +67,23 @@ export function ProjetoLayout() {
         <ul className="nav nav-tabs mb-4 flex-nowrap overflow-auto">
           {abas.map((a) => (
             <li className="nav-item" key={a.para}>
-              <NavLink end={a.para === ''} to={a.para} className="nav-link text-nowrap">
-                <i className={`bi ${a.icone} me-1`} aria-hidden="true" />
-                {a.texto}
-              </NavLink>
+              {a.recurso && !temRecurso(p, a.recurso) ? (
+                // fora do plano do projeto: aba desabilitada, com o motivo na dica
+                <span
+                  className="nav-link text-nowrap disabled"
+                  aria-disabled="true"
+                  title={`${NOME_RECURSO[a.recurso]}: disponível no plano Master`}
+                >
+                  <i className="bi bi-lock-fill me-1" aria-hidden="true" />
+                  {a.texto}
+                  <span className="visually-hidden"> (disponível no plano Master)</span>
+                </span>
+              ) : (
+                <NavLink end={a.para === ''} to={a.para} className="nav-link text-nowrap">
+                  <i className={`bi ${a.icone} me-1`} aria-hidden="true" />
+                  {a.texto}
+                </NavLink>
+              )}
             </li>
           ))}
         </ul>

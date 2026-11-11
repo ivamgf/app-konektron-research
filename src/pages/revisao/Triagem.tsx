@@ -18,6 +18,8 @@ import {
   type Similaridade,
 } from './similaridade';
 import { formatarNota, lerPerfilAjustado, NotaSimilaridade, PainelSimilaridade } from './PainelSimilaridade';
+import { RecursoBloqueado } from '../../components/Plano';
+import { temRecurso } from '../../lib/planos';
 import {
   corpoDecisao,
   pendenteParaMim,
@@ -209,9 +211,12 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
     queryFn: () => get<EtapaRevisao[]>(`/revisoes/${revisao.id}/etapas`),
   });
   const verificar = ehFase1ou2(etapa, etapas.data);
+  // verificação dos termos e similaridade são do plano Master (plano do dono do projeto)
+  const usaTermos = verificar && temRecurso(projeto, 'VERIFICACAO_TERMOS');
+  const usaSimilaridade = verificar && temRecurso(projeto, 'SIMILARIDADE');
   const expressoes = useMemo(
-    () => (verificar ? expressoesDoProtocolo(protocolo.data) : []),
-    [verificar, protocolo.data],
+    () => (usaTermos ? expressoesDoProtocolo(protocolo.data) : []),
+    [usaTermos, protocolo.data],
   );
   const termos = useMemo(() => {
     const m = new Map<string, ResultadoTermos>();
@@ -232,17 +237,17 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
   const corpus = useQuery({
     queryKey: ['etapa', etapa.id, 'documentos', 'todos'],
     queryFn: () => get<Resposta>(`/etapas/${etapa.id}/documentos`, { filtro: 'todos' }),
-    enabled: verificar,
+    enabled: usaSimilaridade,
   });
   const sims = useMemo(() => {
     const m = new Map<string, Similaridade>();
-    if (!verificar) return m;
+    if (!usaSimilaridade) return m;
     const base = corpus.data?.documentos.length ? corpus.data.documentos : todosDocs;
     const r = similaridades(base, perfilAjustado ?? perfilAuto);
     base.forEach((d, i) => m.set(d.revisaoDocumentoId, r[i]));
     return m;
-  }, [verificar, corpus.data, todosDocs, perfilAjustado, perfilAuto]);
-  const temPerfil = perfilAuto.length > 0 || !!perfilAjustado?.trim();
+  }, [usaSimilaridade, corpus.data, todosDocs, perfilAjustado, perfilAuto]);
+  const temPerfil = usaSimilaridade && (perfilAuto.length > 0 || !!perfilAjustado?.trim());
   // sugestão só com nota >= 0,7; a seleção continua livre para qualquer documento
   const similar = (id: string) => temPerfil && ehSugeridoPorSimilaridade(sims.get(id)?.nota ?? 0);
   const qtdSimilares = temPerfil ? todosDocs.filter((d) => similar(d.revisaoDocumentoId)).length : 0;
@@ -559,7 +564,8 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                     )}
                   </div>
                 )}
-                {verificar && (
+                {verificar && !usaSimilaridade && <RecursoBloqueado recurso="SIMILARIDADE" compacto />}
+                {usaSimilaridade && (
                   <PainelSimilaridade
                     projetoId={projeto.id}
                     etapaId={etapa.id}
@@ -586,7 +592,8 @@ export function Triagem({ revisao, etapa }: { revisao: Revisao; etapa: EtapaRevi
                     }
                   />
                 )}
-                {verificar && (
+                {verificar && !usaTermos && <RecursoBloqueado recurso="VERIFICACAO_TERMOS" compacto />}
+                {usaTermos && (
                   <div className="border rounded p-2 mb-2 small bg-body" role="status">
                     {expressoes.length ? (
                       <>

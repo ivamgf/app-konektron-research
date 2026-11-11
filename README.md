@@ -45,7 +45,7 @@ Os links dos e-mails da API (`APP_URL/confirmar-email`, `/redefinir-senha` e `/c
 ## Sessão
 
 - O token de acesso (15 min) fica só em memória. O refresh token vai em cookie httpOnly (RNF04), e o app renova a sessão sozinho ao receber 401.
-- O cookie só é enviado entre domínios do mesmo site (`app.dominio.com.br` e `api.dominio.com.br`). Nos endereços `*.herokuapp.com` o navegador o bloqueia: a sessão funciona enquanto a aba estiver aberta, mas não sobrevive a um recarregamento. Com o domínio próprio (ERS 2.4) isso deixa de acontecer.
+- O cookie só é enviado entre domínios do mesmo site (`app.dominio.com.br` e `api.dominio.com.br`); nos endereços `*.herokuapp.com` o navegador o bloqueia. Por isso o refresh token também fica no `localStorage` (chave `kr_rt`), e a sessão sobrevive ao F5. As abas renovam uma de cada vez (Web Locks), porque a API derruba todas as sessões se um refresh token já usado for reapresentado. Falha de rede na renovação não encerra a sessão; só a recusa da API (401) encerra.
 - Na análise, se a conexão cair, as respostas ficam guardadas no navegador e são enviadas quando ela volta (UC12, fluxo 4a).
 
 ## Heroku

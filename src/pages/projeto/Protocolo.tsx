@@ -10,6 +10,8 @@ import { ListaEditavel } from '../../components/ListaEditavel';
 import { BotaoTarefa } from '../../components/BotaoTarefa';
 import { BotaoImprimir } from '../../components/BotaoImprimir';
 import { useProjetoAtual } from './ProjetoLayout';
+import { RecursoBloqueado } from '../../components/Plano';
+import { temRecurso } from '../../lib/planos';
 import {
   corpoDoPasso,
   METODOLOGIAS,
@@ -307,6 +309,10 @@ function ConteudoDoPasso({
   const bases = useBases();
   const idiomas = useIdiomas();
   const qc = useQueryClient();
+  // recursos do plano do projeto (TCLE e questões de análise são do plano Master)
+  const { projeto } = useProjetoAtual();
+  const temTcle = temRecurso(projeto, 'TCLE');
+  const temQuestoes = temRecurso(projeto, 'QUESTOES');
   const ctx = () => contextoDoProtocolo(r, idiomas.data);
   const ia = (orientacao?: string): IACampo => ({ contexto: ctx, projetoId, somenteLeitura, orientacao });
   const converter = useMutation({
@@ -386,7 +392,8 @@ function ConteudoDoPasso({
               <button
                 type="button"
                 className="btn btn-outline-primary btn-sm"
-                disabled={converter.isPending || !r.outrasQuestoes.length}
+                disabled={!temQuestoes || converter.isPending || !r.outrasQuestoes.length}
+                title={temQuestoes ? undefined : 'As questões de análise fazem parte do plano Master'}
                 onClick={() => converter.mutate()}
               >
                 <i className="bi bi-arrow-right-square me-1" aria-hidden="true" />
@@ -758,7 +765,11 @@ function ConteudoDoPasso({
             linhas={4}
             ia={ia('Benefícios diretos e indiretos para participantes, ciência e sociedade.')}
           />
-          <Tcle projetoId={projetoId} somenteLeitura={somenteLeitura} />
+          {temTcle ? (
+            <Tcle projetoId={projetoId} somenteLeitura={somenteLeitura} />
+          ) : (
+            <RecursoBloqueado recurso="TCLE" compacto />
+          )}
         </>
       );
     case 11:
@@ -784,7 +795,7 @@ const SECOES = [
   { id: 'criterios', texto: 'Critérios' },
   { id: 'revisoes', texto: 'Revisões previstas' },
   { id: 'historico', texto: 'Histórico e aprovação' },
-  { id: 'referencias', texto: 'Referências (ABNT e APA)' },
+  { id: 'referencias', texto: 'Referências (ABNT NBR 6023 e APA)' },
 ];
 
 function Conclusao({

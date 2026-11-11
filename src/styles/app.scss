@@ -382,6 +382,10 @@ $k-laranja-texto: #b35500; // laranja com texto branco por cima (4,6:1, WCAG AA)
   transform: skewX(-18deg);
   opacity: 0.85;
 }
+.k-home-logo {
+  border-radius: 12px;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
+}
 .k-home-selo {
   display: inline-block;
   font-weight: 700;

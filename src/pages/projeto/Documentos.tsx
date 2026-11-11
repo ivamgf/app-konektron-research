@@ -102,6 +102,7 @@ export default function Documentos() {
                   <th>Autores</th>
                   <th>Ano</th>
                   <th>Periódico</th>
+                  <th className="text-center">Link</th>
                   <th className="text-center">PDF</th>
                 </tr>
               </thead>
@@ -215,12 +216,28 @@ function LinhaDocumento({ d, aoAbrir }: { d: DocumentoResumo; aoAbrir: () => voi
           {d.periodico ?? '—'}
         </td>
         <td className="text-center">
+          {d.link ? (
+            <a
+              href={d.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={d.link}
+              aria-label="Abrir artigo na web (abre em nova aba)"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <i className="bi bi-box-arrow-up-right" aria-hidden="true" />
+            </a>
+          ) : (
+            '—'
+          )}
+        </td>
+        <td className="text-center">
           {d.arquivoId ? <i className="bi bi-file-earmark-pdf text-danger" role="img" aria-label="Com PDF" /> : '—'}
         </td>
       </tr>
       {ver && (
         <tr className="table-light">
-          <td colSpan={6} id={idTexto}>
+          <td colSpan={7} id={idTexto}>
             <div className="k-label text-secondary">{ver === 'resumo' ? 'Resumo' : 'Palavras-chave'}</div>
             <p className="small k-leitura mb-0">{ver === 'resumo' ? d.resumo : d.palavrasChave}</p>
           </td>
@@ -293,6 +310,16 @@ function DetalheDocumento({
               </>
             )}
           </div>
+          {doc.link && (
+            <p className="small mb-3">
+              <i className="bi bi-globe2 me-1 text-secondary" aria-hidden="true" />
+              <strong>Link do artigo:</strong>{' '}
+              <a href={doc.link} target="_blank" rel="noopener noreferrer" className="text-break">
+                {doc.link}
+                <span className="visually-hidden"> (abre em nova aba)</span>
+              </a>
+            </p>
+          )}
           {doc.resumo ? (
             <p className="small k-leitura">{doc.resumo}</p>
           ) : (
@@ -340,6 +367,13 @@ function DetalheDocumento({
             </div>
           )}
           <div className="d-flex flex-wrap gap-2">
+            {doc.link && (
+              <a className="btn btn-outline-primary btn-sm" href={doc.link} target="_blank" rel="noopener noreferrer">
+                <i className="bi bi-box-arrow-up-right me-1" aria-hidden="true" />
+                Abrir artigo na web
+                <span className="visually-hidden"> (abre em nova aba)</span>
+              </a>
+            )}
             {doc.arquivoId && (
               <button className="btn btn-outline-danger btn-sm" onClick={() => abrirPdf(doc.id).catch(setErro)}>
                 <i className="bi bi-file-earmark-pdf me-1" aria-hidden="true" />

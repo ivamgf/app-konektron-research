@@ -83,6 +83,13 @@ export function Inicio() {
           <span className="k-home-hero-forma d-none d-lg-block" aria-hidden="true" />
           <div className="container-xl px-3 py-5 d-flex flex-wrap align-items-center gap-5 position-relative">
             <div className="flex-grow-1 py-md-4" style={{ maxWidth: 640 }}>
+              <img
+                src="/brand/konektron.png"
+                alt="Logo KoneKtron"
+                width={88}
+                height={88}
+                className="k-home-logo d-block mb-4"
+              />
               <span className="k-home-selo mb-3">
                 <i className="bi bi-mortarboard me-1" aria-hidden="true" /> KoneKtron · Research
               </span>
