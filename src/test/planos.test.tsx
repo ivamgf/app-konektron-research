@@ -13,13 +13,18 @@ const auth = vi.hoisted(() => ({
   entrar: vi.fn(),
   sair: vi.fn(),
 }));
-const respostas = vi.hoisted(() => ({ plano: {} as Record<string, unknown>, projeto: {} as Record<string, unknown> }));
+const respostas = vi.hoisted(() => ({
+  plano: {} as Record<string, unknown>,
+  projeto: {} as Record<string, unknown>,
+  isento: false,
+}));
 const get = vi.hoisted(() =>
   vi.fn(async (url: string) => {
     if (url === '/me/plano') return respostas.plano;
     if (url === '/planos/assinatura')
       return {
         cobrancaAtiva: true,
+        isento: respostas.isento,
         sandbox: true,
         cpfCnpj: null,
         descontoEstudante: false,
@@ -63,6 +68,8 @@ const planoFree = {
 };
 
 beforeEach(() => {
+  respostas.isento = false;
+  post.mockClear();
   respostas.plano = planoFree;
   respostas.projeto = {
     id: '00000000-0000-0000-0000-0000000000a1',
@@ -112,7 +119,7 @@ describe('Planos', () => {
     expect(screen.getByText('R$ 49,90')).toBeInTheDocument();
     expect(screen.getByText('R$ 99,90')).toBeInTheDocument();
     // assinar: CPF/CNPJ no formulário, chamada à API e ida para a fatura do Asaas
-    await userEvent.click(screen.getByRole('button', { name: 'Assinar o Master' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Assinar o Master' }));
     expect(await screen.findByText(/Ambiente de testes \(sandbox\)/)).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('CPF ou CNPJ para a cobrança'), '52998224724');
     await userEvent.click(screen.getByRole('button', { name: /Ir para o pagamento/ }));
@@ -129,5 +136,15 @@ describe('Planos', () => {
       }),
     );
     await waitFor(() => expect(abrirFatura).toHaveBeenCalledWith('https://sandbox.asaas.com/i/abc123'));
+  });
+
+  it('conta isenta (admin ou vitalícia) não vê assinatura nem com o link direto', async () => {
+    respostas.isento = true;
+    respostas.plano = { ...planoFree, plano: 'MASTER', limiteProjetos: null, podeCriarProjeto: true, expiraEm: null };
+    abrir('/planos?assinar=MASTER&ciclo=MENSAL');
+    expect(await screen.findByText(/sem cobrança/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Assinar o/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ir para o pagamento/)).not.toBeInTheDocument();
+    expect(post).not.toHaveBeenCalled();
   });
 });

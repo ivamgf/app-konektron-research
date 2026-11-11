@@ -7,6 +7,8 @@ export type StatusAssinatura = 'PENDENTE' | 'ATIVA' | 'ATRASADA' | 'CANCELADA';
 
 export type DadosAssinatura = {
   cobrancaAtiva: boolean;
+  /** admin ou conta vitalícia: Master sem cobrança, não pode assinar */
+  isento?: boolean;
   sandbox: boolean;
   cpfCnpj: string | null;
   descontoEstudante: boolean;
