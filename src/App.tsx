@@ -25,6 +25,8 @@ const Revisoes = lazy(() => import('./pages/projeto/Revisoes'));
 const Analises = lazy(() => import('./pages/projeto/Analises'));
 const Membros = lazy(() => import('./pages/projeto/Membros'));
 const Artigo = lazy(() => import('./pages/projeto/Artigo'));
+const Cronograma = lazy(() => import('./pages/projeto/Cronograma'));
+const Relatorio = lazy(() => import('./pages/projeto/Relatorio'));
 const Auditoria = lazy(() => import('./pages/projeto/Auditoria'));
 const Revisao = lazy(() => import('./pages/revisao/Revisao'));
 const Analise = lazy(() => import('./pages/analise/Analise'));
@@ -88,6 +90,8 @@ export function App() {
                   </ExigeRecurso>
                 }
               />
+              <Route path="cronograma" element={<Cronograma />} />
+              <Route path="relatorio" element={<Relatorio />} />
               <Route path="membros" element={<Membros />} />
               <Route
                 path="artigo"

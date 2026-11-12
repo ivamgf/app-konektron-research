@@ -28,6 +28,8 @@ const SECOES_PROJETO: Record<string, string> = {
   referencias: 'Referências',
   revisoes: 'Revisões',
   analises: 'Análises',
+  cronograma: 'Cronograma',
+  relatorio: 'Relatório de pesquisa',
   membros: 'Membros',
   artigo: 'Gerador de artigo',
   auditoria: 'Auditoria',

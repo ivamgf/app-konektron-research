@@ -24,6 +24,8 @@ const ABAS: { para: string; texto: string; icone: string; recurso?: Recurso }[] 
   { para: 'referencias', texto: 'Referências', icone: 'bi-bookmarks' },
   { para: 'revisoes', texto: 'Revisões', icone: 'bi-journal-text' },
   { para: 'analises', texto: 'Análises', icone: 'bi-clipboard-data', recurso: 'ANALISES' },
+  { para: 'cronograma', texto: 'Cronograma', icone: 'bi-calendar3' },
+  { para: 'relatorio', texto: 'Relatório', icone: 'bi-file-earmark-pdf' },
   { para: 'membros', texto: 'Membros', icone: 'bi-people' },
   { para: 'artigo', texto: 'Artigo', icone: 'bi-file-earmark-word', recurso: 'ARTIGO' },
 ];

@@ -976,3 +976,71 @@ html[data-k-contraste] {
 .k-texto-base {
   color: var(--bs-warning-text-emphasis);
 }
+
+// cronograma: grade de etapas x períodos; verde = execução (mesmas cores do modelo impresso)
+.k-crono {
+  --k-crono-exec: #93c47d;
+  --k-crono-exec-texto: #1e3a12;
+  --k-crono-cab: #d0e0e3;
+  .k-crono-cab {
+    background-color: var(--k-crono-cab);
+    color: #212529;
+  }
+  .k-crono-etapa {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 14rem;
+    background-color: var(--bs-body-bg);
+  }
+  thead .k-crono-etapa {
+    background-color: var(--k-crono-cab);
+  }
+  td.k-crono-ano-inicio {
+    border-left-width: 2px;
+  }
+  .k-crono-celula {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 2.5rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--k-crono-exec-texto);
+    touch-action: none; // arrastar com o dedo pinta em vez de rolar
+    user-select: none;
+  }
+  button.k-crono-celula {
+    cursor: pointer;
+    &:hover {
+      background-color: rgba(147, 196, 125, 0.35);
+    }
+    &:focus-visible {
+      outline: 3px solid var(--bs-primary);
+      outline-offset: -3px;
+    }
+  }
+  .k-crono-celula[aria-pressed='true'],
+  .k-crono-celula.marcada {
+    background-color: var(--k-crono-exec);
+  }
+}
+.k-crono-legenda {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: -0.15rem;
+  background-color: #93c47d;
+  border: 1px solid #6a9a55;
+}
+html[data-k-contraste] .k-crono {
+  --k-crono-exec: #ffff00;
+  --k-crono-exec-texto: #000;
+  --k-crono-cab: #000;
+  .k-crono-cab {
+    color: #fff;
+  }
+}
