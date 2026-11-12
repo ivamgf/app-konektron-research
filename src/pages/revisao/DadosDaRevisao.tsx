@@ -6,7 +6,7 @@ import { corDaSituacao, dataHora, rotulo } from '../../lib/formato';
 import type { EtapaRevisao, Revisao } from '../../lib/tipos';
 import { ErroAlerta } from '../../components/ui';
 import { useProjetoAtual } from '../projeto/ProjetoLayout';
-import { aceitaImportacao, EditarEtapa, ImportarCsvEtapa } from './AcoesEtapa';
+import { aceitaImportacao, EditarEtapa, etapaDeEntrada, ImportarCsvEtapa } from './AcoesEtapa';
 import { chaveEtapas } from './Revisao';
 
 /** Painel: dados da revisão e de cada etapa (situação, datas, contagens) com importação e edição */
@@ -137,7 +137,13 @@ export function DadosDaRevisao({ revisao }: { revisao: Revisao }) {
 
       {editar && <EditarEtapa revisaoId={revisao.id} etapa={editar} aberto aoFechar={() => setEditar(null)} />}
       {importar && (
-        <ImportarCsvEtapa revisaoId={revisao.id} etapa={importar} aberto aoFechar={() => setImportar(null)} />
+        <ImportarCsvEtapa
+          revisaoId={revisao.id}
+          etapa={importar}
+          entrada={etapaDeEntrada(importar, lista)}
+          aberto
+          aoFechar={() => setImportar(null)}
+        />
       )}
     </section>
   );

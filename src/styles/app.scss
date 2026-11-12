@@ -1044,3 +1044,92 @@ html[data-k-contraste] .k-crono {
     color: #fff;
   }
 }
+
+// ---- Seletor de idioma (botão com a sigla + menu)
+.k-idioma-botao {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 999px;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  padding: 0.25rem 0.65rem;
+  &:hover,
+  &[aria-expanded='true'] {
+    border-color: $k-secondary-800;
+    color: $k-secondary-800;
+  }
+}
+.k-idioma-sigla {
+  display: inline-block;
+  min-width: 1.9rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.3rem;
+  background: rgba($k-secondary-800, 0.12);
+  color: $k-secondary-900;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.k-idioma-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 1060;
+  min-width: 13rem;
+  padding: 0.35rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.6rem;
+  background: var(--bs-body-bg);
+  &.k-idioma-cima {
+    top: auto;
+    bottom: calc(100% + 0.35rem);
+  }
+  &.k-idioma-largo {
+    left: 0;
+    right: 0;
+    min-width: 0;
+  }
+}
+.k-idioma-opcao {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--bs-body-color);
+  text-align: left;
+  &:hover,
+  &:focus-visible {
+    background: rgba($k-secondary-800, 0.08);
+  }
+  &.ativo {
+    font-weight: 600;
+    color: $k-secondary-800;
+    .k-idioma-sigla {
+      background: $k-secondary-800;
+      color: #fff;
+    }
+  }
+}
+.k-idioma-rodape {
+  margin-top: 0.25rem;
+  padding: 0.4rem 0.55rem 0.2rem;
+  border-top: 1px solid var(--bs-border-color);
+  color: var(--bs-secondary-color);
+  font-size: 0.72rem;
+}
+[data-bs-theme='dark'] {
+  .k-idioma-sigla {
+    background: rgba($k-secondary-400, 0.18);
+    color: $k-secondary-200;
+  }
+  .k-idioma-botao:hover,
+  .k-idioma-botao[aria-expanded='true'],
+  .k-idioma-opcao.ativo {
+    border-color: $k-secondary-400;
+    color: $k-secondary-400;
+  }
+}

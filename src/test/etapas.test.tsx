@@ -137,3 +137,57 @@ describe('EditarEtapa', () => {
     await waitFor(() => expect(aoFechar).toHaveBeenCalled());
   });
 });
+
+describe('ImportarCsvEtapa: adicionar ou substituir', () => {
+  it('envia o modo escolhido (adicionar é o padrão) e explica o efeito em cada fase', async () => {
+    const rel = {
+      linhas: 1,
+      documentosCriados: 0,
+      documentosDoProjeto: 0,
+      documentosDaRevisao: 1,
+      decisoes: { selecionados: 1, excluidos: 0, semDecisao: 0 },
+      selecionadosEmEtapasAnteriores: 0,
+      documentosRemovidos: 3,
+      avisos: [],
+      totalAvisos: 0,
+      simulado: true,
+    };
+    post.mockReset();
+    post.mockResolvedValue({ data: rel });
+    const { unmount } = comQuery(<ImportarCsvEtapa revisaoId="r1" etapa={etapa()} aberto aoFechar={vi.fn()} />);
+    expect(screen.getByRole('radio', { name: /Adicionar/ })).toBeChecked();
+    await userEvent.upload(screen.getByLabelText('Arquivo CSV'), new File(['titulo\nA\n'], 'scielo.csv'));
+    await userEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    await screen.findByText(/Simulação/);
+    expect((post.mock.calls[0][1] as FormData).get('modo')).toBe('ADICIONAR');
+    await userEvent.click(screen.getByRole('radio', { name: /Substituir só as bases do arquivo/ }));
+    expect(screen.getByText(/saem da revisão \(com as decisões deles\)/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    expect(await screen.findByText(/3 documento\(s\) de importações anteriores/)).toBeInTheDocument();
+    expect((post.mock.calls[1][1] as FormData).get('modo')).toBe('SUBSTITUIR_BASES');
+    unmount();
+    // F2: os documentos vêm da F1 e não saem da revisão
+    comQuery(
+      <ImportarCsvEtapa
+        revisaoId="r1"
+        etapa={etapa({ nome: 'Triagem F2' })}
+        entrada={false}
+        aberto
+        aoFechar={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole('radio', { name: /Substituir tudo/ }));
+    expect(screen.getByText(/os documentos vêm da fase anterior/)).toBeInTheDocument();
+  });
+
+  it('etapaDeEntrada: só a primeira triagem (e busca/deduplicação antes dela) recebe os documentos', async () => {
+    const { etapaDeEntrada } = await import('../pages/revisao/AcoesEtapa');
+    const f1 = etapa({ id: 'f1', ordem: 3 });
+    const f2 = etapa({ id: 'f2', ordem: 4, nome: 'Triagem F2' });
+    const busca = etapa({ id: 'b', ordem: 1, categoria: 'BUSCA', exigeTriagem: false });
+    const todas = [busca, f1, f2];
+    expect(etapaDeEntrada(f1, todas)).toBe(true);
+    expect(etapaDeEntrada(busca, todas)).toBe(true);
+    expect(etapaDeEntrada(f2, todas)).toBe(false);
+  });
+});

@@ -124,6 +124,7 @@ export function Inclusao({ revisaoId, etapa }: { revisaoId: string; etapa: Etapa
                 <ImportarCsvEtapa
                   revisaoId={revisaoId}
                   etapa={etapa}
+                  entrada={etapa.categoria !== 'INCLUSAO'}
                   aberto
                   origemInicial={origem}
                   aoFechar={() => {

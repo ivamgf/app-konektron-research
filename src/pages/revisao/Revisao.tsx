@@ -15,7 +15,7 @@ import { Painel } from './Painel';
 import { Checklist } from './Checklist';
 import { DocumentosDaRevisao } from './DocumentosDaRevisao';
 import { Duplicados } from './Duplicados';
-import { aceitaImportacao, EditarEtapa, ImportarCsvEtapa } from './AcoesEtapa';
+import { aceitaImportacao, EditarEtapa, etapaDeEntrada, ImportarCsvEtapa } from './AcoesEtapa';
 import { ImportacaoTriagem } from './ImportacaoTriagem';
 import { DiagramaFluxo } from './DiagramaFluxo';
 import { RegistroDaRevisao } from './RegistroDaRevisao';
@@ -318,7 +318,13 @@ function PainelEtapa({ revisao, etapa, etapas }: { revisao: TRevisao; etapa: Eta
       </div>
 
       <EditarEtapa revisaoId={revisao.id} etapa={etapa} aberto={editar} aoFechar={() => setEditar(false)} />
-      <ImportarCsvEtapa revisaoId={revisao.id} etapa={etapa} aberto={importar} aoFechar={() => setImportar(false)} />
+      <ImportarCsvEtapa
+        revisaoId={revisao.id}
+        etapa={etapa}
+        entrada={etapaDeEntrada(etapa, etapas)}
+        aberto={importar}
+        aoFechar={() => setImportar(false)}
+      />
       <Modal
         titulo="Dispensar etapa"
         aberto={dispensar}

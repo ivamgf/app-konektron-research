@@ -59,3 +59,42 @@ describe('ResumosProtocolo', () => {
     expect(screen.queryByLabelText('Idioma do resumo 4')).not.toBeInTheDocument();
   });
 });
+
+describe('limite de 250 palavras nos resumos', async () => {
+  const { cortarPalavras, palavras } = await import('../pages/projeto/ResumosProtocolo');
+  const texto = (n: number) => Array.from({ length: n }, (_, i) => `p${i + 1}`).join(' ');
+
+  it('corta depois da palavra 250 e mantém textos menores como estão', () => {
+    expect(palavras(cortarPalavras(texto(300)))).toBe(250);
+    expect(cortarPalavras(texto(300)).endsWith('p250')).toBe(true);
+    expect(cortarPalavras('um\ndois  três ', 2)).toBe('um\ndois');
+    expect(cortarPalavras('um dois ', 2)).toBe('um dois ');
+    expect(cortarPalavras(texto(10))).toBe(texto(10));
+  });
+
+  it('ligado, limita a digitação, as traduções e oferece cortar os resumos longos', async () => {
+    localStorage.clear();
+    post.mockResolvedValueOnce({ traducoes: { en: texto(400), es: texto(260) }, aviso: 'Revise.' });
+    montar();
+    const chave = await screen.findByRole('switch', { name: /Limitar a 250 palavras/ });
+    await userEvent.click(chave);
+    expect(localStorage.getItem('konektron.resumo.limite250.p1')).toBe('1');
+    await userEvent.click(screen.getByRole('button', { name: /Preencher os vazios/ }));
+    await waitFor(() =>
+      expect(palavras((screen.getByLabelText('Resumo em Inglês') as HTMLTextAreaElement).value)).toBe(250),
+    );
+    expect(palavras((screen.getByLabelText('Resumo em Espanhol') as HTMLTextAreaElement).value)).toBe(250);
+    expect(screen.getAllByText('250 / 250 palavras')).toHaveLength(2);
+    // desligado, um texto longo colado fica inteiro; ao religar, aparece o aviso e o botão de cortar
+    await userEvent.click(chave);
+    const pt = screen.getByLabelText('Resumo em Português');
+    await userEvent.clear(pt);
+    await userEvent.click(pt);
+    await userEvent.paste(texto(270));
+    expect(palavras((pt as HTMLTextAreaElement).value)).toBe(270);
+    await userEvent.click(chave);
+    expect(screen.getByText(/1 resumo\(s\) passam do limite/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Cortar em 250 palavras/ }));
+    expect(palavras((pt as HTMLTextAreaElement).value)).toBe(250);
+  });
+});

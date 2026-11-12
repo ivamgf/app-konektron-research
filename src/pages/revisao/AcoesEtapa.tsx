@@ -14,12 +14,46 @@ export type RelatorioImportacao = {
   selecionadosEmEtapasAnteriores: number;
   temasCriados?: number;
   outrasOrigens?: { revisaoAnterior: number; integrados: number };
+  documentosRemovidos?: number;
+  modo?: ModoImportacao;
   avisos: { linha: number; mensagem: string }[];
   totalAvisos: number;
   simulado: boolean;
 };
 
 const CATEGORIAS_IMPORTAVEIS = ['BUSCA', 'DEDUPLICACAO', 'TRIAGEM', 'INCLUSAO'];
+
+/**
+ * Como o arquivo convive com as importações anteriores (um CSV por base: ieee.csv, pubmed.csv, scielo.csv…)
+ */
+export type ModoImportacao = 'ADICIONAR' | 'SUBSTITUIR_BASES' | 'SUBSTITUIR';
+export const MODOS_IMPORTACAO: { valor: ModoImportacao; titulo: string; texto: string; icone: string }[] = [
+  {
+    valor: 'ADICIONAR',
+    titulo: 'Adicionar',
+    icone: 'bi-plus-circle',
+    texto:
+      'Soma os documentos do arquivo aos já importados (ex.: subir o ieee.csv depois do pubmed.csv). Documentos que já estão na revisão têm a decisão atualizada; os demais ficam como estão.',
+  },
+  {
+    valor: 'SUBSTITUIR_BASES',
+    titulo: 'Substituir só as bases do arquivo',
+    icone: 'bi-arrow-repeat',
+    texto:
+      'Corrige um arquivo enviado antes (ex.: um novo scielo.csv): o que veio antes das mesmas bases dá lugar ao conteúdo deste arquivo. As outras bases não mudam.',
+  },
+  {
+    valor: 'SUBSTITUIR',
+    titulo: 'Substituir tudo',
+    icone: 'bi-exclamation-triangle',
+    texto:
+      'Reescreve tudo o que as importações CSV anteriores registraram nesta etapa, de todas as bases. Use para recomeçar a partir de um arquivo único.',
+  },
+];
+
+/** Etapa de entrada: os documentos entram na revisão por ela (busca, deduplicação ou primeira triagem) */
+export const etapaDeEntrada = (e: EtapaRevisao, etapas: EtapaRevisao[]) =>
+  e.categoria !== 'INCLUSAO' && !etapas.some((x) => x.exigeTriagem && x.ordem < e.ordem);
 
 /**
  * Etapas que recebem documentos por CSV (busca, deduplicação, triagem, inclusão ou livre com triagem).
@@ -90,9 +124,12 @@ export function ImportarCsvEtapa({
   aberto,
   aoFechar,
   origemInicial = '',
+  entrada = true,
 }: {
   revisaoId: string;
   etapa: EtapaRevisao;
+  /** etapa por onde os documentos entram (F1): no modo substituir, os que não estão no arquivo saem da revisão */
+  entrada?: boolean;
   aberto: boolean;
   aoFechar: () => void;
   /** já abre com a origem escolhida (cadastro de revisão anterior / integrados) */
@@ -100,7 +137,7 @@ export function ImportarCsvEtapa({
 }) {
   const qc = useQueryClient();
   const [arquivo, setArquivo] = useState<File | null>(null);
-  const [substituir, setSubstituir] = useState(false);
+  const [modo, setModo] = useState<ModoImportacao>('ADICIONAR');
   const pendente = etapa.status === 'PENDENTE';
   const [iniciar, setIniciar] = useState(true);
   const [relatorio, setRelatorio] = useState<RelatorioImportacao | null>(null);
@@ -109,7 +146,7 @@ export function ImportarCsvEtapa({
   useEffect(() => {
     if (!aberto) {
       setArquivo(null);
-      setSubstituir(false);
+      setModo('ADICIONAR');
       setOrigem(origemInicial);
       setIniciar(true);
       setRelatorio(null);
@@ -120,7 +157,7 @@ export function ImportarCsvEtapa({
     mutationFn: async (simular: boolean) => {
       const fd = new FormData();
       fd.append('arquivo', arquivo!);
-      fd.append('substituir', String(substituir));
+      fd.append('modo', modo);
       fd.append('simular', String(simular));
       if (pendente) fd.append('iniciar', String(iniciar));
       if (origem) fd.append('origem', origem);
@@ -262,24 +299,46 @@ export function ImportarCsvEtapa({
           </label>
         </div>
       )}
-      {etapa.categoria !== 'BUSCA' && (
-        <div className="form-check mb-3">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            id="csv-substituir"
-            checked={substituir}
-            disabled={!!gravado}
-            onChange={(e) => {
-              setSubstituir(e.target.checked);
-              setRelatorio(null);
-            }}
-          />
-          <label className="form-check-label" htmlFor="csv-substituir">
-            Substituir as decisões já registradas nesta etapa (as que não estiverem no arquivo ficam sem decisão)
-          </label>
+      <fieldset className="mb-3">
+        <legend className="form-label fs-6 mb-1">Este arquivo deve…</legend>
+        <div className="d-grid gap-2">
+          {MODOS_IMPORTACAO.map((m) => (
+            <label
+              key={m.valor}
+              className={`k-opcao-modo border rounded p-2 d-flex gap-2 ${modo === m.valor ? 'border-primary bg-primary-subtle' : ''}`}
+              htmlFor={`csv-modo-${m.valor}`}
+            >
+              <input
+                className="form-check-input mt-1 flex-shrink-0"
+                type="radio"
+                name="csv-modo"
+                id={`csv-modo-${m.valor}`}
+                value={m.valor}
+                checked={modo === m.valor}
+                disabled={!!gravado}
+                onChange={() => {
+                  setModo(m.valor);
+                  setRelatorio(null);
+                }}
+              />
+              <span>
+                <span className="fw-medium d-block">
+                  <i className={`bi ${m.icone} me-1`} aria-hidden="true" />
+                  {m.titulo}
+                </span>
+                <span className="small text-secondary">{m.texto}</span>
+              </span>
+            </label>
+          ))}
         </div>
-      )}
+        {modo !== 'ADICIONAR' && (
+          <div className="form-text">
+            {entrada
+              ? 'Documentos de importações CSV anteriores que não estiverem no arquivo saem da revisão (com as decisões deles). Simule para ver quantos.'
+              : 'Nesta fase os documentos vêm da fase anterior e continuam na revisão: só as decisões desta etapa que não estiverem no arquivo ficam sem decisão.'}
+          </div>
+        )}
+      </fieldset>
 
       <ErroAlerta erro={enviar.error} />
       {relatorio && <ResumoImportacao r={relatorio} />}
@@ -306,6 +365,11 @@ function ResumoImportacao({ r }: { r: RelatorioImportacao }) {
           <li>
             {r.outrasOrigens.revisaoAnterior} de revisão anterior · {r.outrasOrigens.integrados} integrado(s) — entram
             como incluídos, sem triagem
+          </li>
+        )}
+        {!!r.documentosRemovidos && (
+          <li className="text-danger">
+            {r.documentosRemovidos} documento(s) de importações anteriores não estão no arquivo e saem da revisão
           </li>
         )}
         {!!r.temasCriados && <li>{r.temasCriados} tema(s) novo(s) no projeto (coluna Temas)</li>}
