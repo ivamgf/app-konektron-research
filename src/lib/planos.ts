@@ -54,6 +54,7 @@ export const PLANOS: InfoPlano[] = [
       'Integração com IA (com a sua conta ou chave)',
       'Protocolo, questões, critérios, documentos e referências',
       'Revisões em etapas, buscas, duplicados e triagem',
+      'Cronograma e relatório de pesquisa (PDF e Word)',
       'Os projetos ficam 3 meses no sistema depois de atingido o limite',
     ],
     naoInclui: ['ANALISES', 'ARTIGO', 'TCLE', 'SIMILARIDADE', 'VERIFICACAO_TERMOS'],
@@ -71,6 +72,7 @@ export const PLANOS: InfoPlano[] = [
       'Integração com IA (com a sua conta ou chave)',
       'Protocolo, questões, critérios, documentos e referências',
       'Revisões em etapas, buscas, duplicados e triagem',
+      'Cronograma e relatório de pesquisa (PDF e Word)',
       'Equipe, papéis e auditoria',
     ],
     naoInclui: ['ANALISES', 'ARTIGO', 'TCLE', 'SIMILARIDADE', 'VERIFICACAO_TERMOS'],
@@ -78,8 +80,8 @@ export const PLANOS: InfoPlano[] = [
   {
     id: 'MASTER',
     nome: 'Master',
-    mensal: 99.9,
-    anual: 999,
+    mensal: 79.9,
+    anual: 799,
     resumo: 'Acesso ilimitado a tudo.',
     inclui: [
       'Tudo do Standard',

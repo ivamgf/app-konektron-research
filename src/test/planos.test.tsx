@@ -28,7 +28,7 @@ const get = vi.hoisted(() =>
         sandbox: true,
         cpfCnpj: null,
         descontoEstudante: false,
-        precos: { STANDARD: { MENSAL: 49.9, ANUAL: 499 }, MASTER: { MENSAL: 99.9, ANUAL: 999 } },
+        precos: { STANDARD: { MENSAL: 49.9, ANUAL: 499 }, MASTER: { MENSAL: 79.9, ANUAL: 799 } },
         assinatura: null,
         pagamentos: [],
       };
@@ -117,7 +117,7 @@ describe('Planos', () => {
     expect(await screen.findByText(/Seu plano atual/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Standard' })).toBeInTheDocument();
     expect(screen.getByText('R$ 49,90')).toBeInTheDocument();
-    expect(screen.getByText('R$ 99,90')).toBeInTheDocument();
+    expect(screen.getByText('R$ 79,90')).toBeInTheDocument();
     // assinar: CPF/CNPJ no formulário, chamada à API e ida para a fatura do Asaas
     await userEvent.click(await screen.findByRole('button', { name: 'Assinar o Master' }));
     expect(await screen.findByText(/Ambiente de testes \(sandbox\)/)).toBeInTheDocument();
