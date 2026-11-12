@@ -64,7 +64,7 @@ describe('Página inicial', () => {
       '/registrar?plano=FREE&ciclo=MENSAL',
     );
     await userEvent.click(within(planos).getByRole('button', { name: /Anual/ }));
-    expect(within(planos).getByText('R$ 999,00')).toBeInTheDocument();
+    expect(within(planos).getByText('R$ 799,00')).toBeInTheDocument();
     expect(within(planos).getByRole('link', { name: 'Cadastrar e assinar o Master' })).toHaveAttribute(
       'href',
       '/registrar?plano=MASTER&ciclo=ANUAL',
@@ -88,7 +88,7 @@ describe('Cadastro', () => {
   it('formulário aberto: valida, cria a conta, entra e segue para a assinatura do plano escolhido', async () => {
     abrir('/registrar?plano=MASTER&ciclo=ANUAL');
     expect(screen.getByRole('heading', { level: 1, name: 'Criar conta' })).toBeInTheDocument();
-    expect(screen.getByText(/Plano escolhido:/)).toHaveTextContent('Master · R$ 999,00/ano');
+    expect(screen.getByText(/Plano escolhido:/)).toHaveTextContent('Master · R$ 799,00/ano');
     await userEvent.click(screen.getByRole('button', { name: 'Criar conta e ir para o pagamento' }));
     expect(await screen.findByText('Informe o nome completo')).toBeInTheDocument();
     expect(screen.getByText('É preciso aceitar o tratamento dos dados')).toBeInTheDocument();
