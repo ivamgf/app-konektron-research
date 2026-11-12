@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
-import { api, get, patch, put } from '../lib/api';
+import { api, get, patch, post, put } from '../lib/api';
+import { dataHora } from '../lib/formato';
 import type { Usuario } from '../lib/tipos';
 import { BotaoConfirmar, Cabecalho, ErroAlerta } from '../components/ui';
 import { REGRA_SENHA, senhaSchema } from './auth/CartaoAuth';
@@ -18,6 +19,17 @@ export default function Perfil() {
     idiomaReferencias: usuario?.preferencias?.idiomaReferencias ?? 'NBR',
   });
   const [senha, setSenha] = useState({ senhaAtual: '', novaSenha: '' });
+  const [novoEmail, setNovoEmail] = useState({ email: '', senhaAtual: '' });
+  const trocarEmail = useMutation({
+    mutationFn: () => put<Usuario>('/me/email', { email: novoEmail.email.trim(), senhaAtual: novoEmail.senhaAtual }),
+    onSuccess: (u) => {
+      atualizarUsuario(u);
+      setNovoEmail({ email: '', senhaAtual: '' });
+    },
+  });
+  const reenviar = useMutation({
+    mutationFn: () => post('/auth/reenviar-confirmacao', { email: usuario?.email }),
+  });
   const [erroSenha, setErroSenha] = useState<string | null>(null);
   const salvar = useMutation({
     mutationFn: () =>
@@ -62,6 +74,28 @@ export default function Perfil() {
               >
                 <ErroAlerta erro={salvar.error} />
                 {salvar.isSuccess && <div className="alert alert-success py-2 small">Perfil salvo.</div>}
+                <div className="mb-3">
+                  <label htmlFor="p-email" className="form-label">
+                    E-mail
+                  </label>
+                  <div className="input-group">
+                    <span className="input-group-text">
+                      <i className="bi bi-envelope" aria-hidden="true" />
+                    </span>
+                    <input
+                      id="p-email"
+                      type="email"
+                      className="form-control notranslate"
+                      translate="no"
+                      value={usuario.email}
+                      readOnly
+                      aria-describedby="p-email-ajuda"
+                    />
+                  </div>
+                  <div id="p-email-ajuda" className="form-text">
+                    Usado para entrar e para os avisos do sistema. Para alterar, use “E-mail de acesso”.
+                  </div>
+                </div>
                 <div className="mb-3">
                   <label htmlFor="p-nome" className="form-label">
                     Nome
@@ -137,6 +171,87 @@ export default function Perfil() {
           </div>
         </div>
         <div className="col-lg-5">
+          <div className="card mb-4">
+            <div className="card-body">
+              <h2 className="h5">E-mail de acesso</h2>
+              <dl className="row small mb-3">
+                <dt className="col-sm-4">E-mail atual</dt>
+                <dd className="col-sm-8 text-break notranslate" translate="no">
+                  {usuario.email}
+                </dd>
+                <dt className="col-sm-4">Situação</dt>
+                <dd className="col-sm-8 mb-0">
+                  {usuario.emailVerificadoEm ? (
+                    <span className="text-success">
+                      <i className="bi bi-patch-check-fill me-1" aria-hidden="true" />
+                      Confirmado em {dataHora(usuario.emailVerificadoEm)}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-warning-emphasis">
+                        <i className="bi bi-exclamation-circle me-1" aria-hidden="true" />
+                        Aguardando confirmação
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-link btn-sm p-0 ms-2 align-baseline"
+                        disabled={reenviar.isPending || reenviar.isSuccess}
+                        onClick={() => reenviar.mutate()}
+                      >
+                        {reenviar.isSuccess ? 'Link reenviado' : 'Reenviar link'}
+                      </button>
+                    </>
+                  )}
+                </dd>
+              </dl>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  trocarEmail.mutate();
+                }}
+              >
+                <ErroAlerta erro={trocarEmail.error ?? reenviar.error} />
+                {trocarEmail.isSuccess && (
+                  <div className="alert alert-success py-2 small">
+                    E-mail alterado. Enviamos um link de confirmação para o novo endereço.
+                  </div>
+                )}
+                <label htmlFor="e-novo" className="form-label">
+                  Novo e-mail
+                </label>
+                <input
+                  id="e-novo"
+                  type="email"
+                  autoComplete="email"
+                  className="form-control mb-2"
+                  value={novoEmail.email}
+                  onChange={(e) => setNovoEmail({ ...novoEmail, email: e.target.value })}
+                />
+                <label htmlFor="e-senha" className="form-label">
+                  Senha atual
+                </label>
+                <input
+                  id="e-senha"
+                  type="password"
+                  autoComplete="current-password"
+                  className="form-control mb-3"
+                  value={novoEmail.senhaAtual}
+                  onChange={(e) => setNovoEmail({ ...novoEmail, senhaAtual: e.target.value })}
+                />
+                <button
+                  className="btn btn-outline-primary"
+                  disabled={
+                    !/^\S+@\S+\.\S+$/.test(novoEmail.email.trim()) ||
+                    novoEmail.email.trim().toLowerCase() === usuario.email ||
+                    !novoEmail.senhaAtual ||
+                    trocarEmail.isPending
+                  }
+                >
+                  Alterar e-mail
+                </button>
+              </form>
+            </div>
+          </div>
           <ConfigIAForm />
           <div className="card mb-4">
             <div className="card-body">

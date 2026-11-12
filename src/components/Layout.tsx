@@ -124,8 +124,17 @@ export function Layout() {
         className={`k-sidebar p-3 d-flex flex-column ${menuAberto ? 'aberta' : ''}`}
         aria-label="Menu principal"
       >
-        <Link to="/projetos" className="text-decoration-none text-reset mb-4">
+        <Link to="/projetos" className="text-decoration-none text-reset mb-3">
           <Marca />
+        </Link>
+        {/* volta à página inicial pública (apresentação), sem sair da conta */}
+        <Link
+          to="/"
+          className="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center gap-2 mb-3"
+          onClick={() => setMenuAberto(false)}
+        >
+          <i className="bi bi-house-door" aria-hidden="true" />
+          Página inicial
         </Link>
         <ul className="nav flex-column gap-1">{MENU.map(link)}</ul>
         {usuario.perfilGlobal === 'ADMIN' && (
@@ -135,7 +144,7 @@ export function Layout() {
           </>
         )}
         <div className="mt-auto pt-4 small">
-          <SeletorIdioma className="mb-3" />
+          <SeletorIdioma className="mb-3" direcao="cima" largo />
           <div className="fw-bold text-truncate notranslate" translate="no">
             {usuario.nome}
           </div>
@@ -159,7 +168,12 @@ export function Layout() {
           >
             <i className="bi bi-list" aria-hidden="true" />
           </button>
-          <Marca />
+          <Link to="/projetos" className="text-decoration-none text-reset">
+            <Marca />
+          </Link>
+          <Link to="/" className="btn btn-outline-secondary btn-sm" aria-label="Página inicial" title="Página inicial">
+            <i className="bi bi-house-door" aria-hidden="true" />
+          </Link>
           <SeletorIdioma />
           <Link
             to="/notificacoes"

@@ -1,5 +1,5 @@
 /**
- * Tradução automática da interface (português → inglês ou espanhol) pelo tradutor de sites do
+ * Tradução automática da interface (português → inglês, espanhol ou francês) pelo tradutor de sites do
  * Google. A escolha fica no cookie "googtrans" (o próprio tradutor o lê ao carregar) e no
  * localStorage; trocar de idioma recarrega a página para aplicar em tudo.
  */
@@ -8,6 +8,7 @@ export const IDIOMAS_SITE = [
   { codigo: 'pt', nome: 'Português', curto: 'PT', lang: 'pt-BR' },
   { codigo: 'en', nome: 'English', curto: 'EN', lang: 'en' },
   { codigo: 'es', nome: 'Español', curto: 'ES', lang: 'es' },
+  { codigo: 'fr', nome: 'Français', curto: 'FR', lang: 'fr' },
 ] as const;
 export type IdiomaSite = (typeof IDIOMAS_SITE)[number]['codigo'];
 
@@ -83,7 +84,13 @@ export function iniciarTraducaoDoSite() {
     const g = (window as unknown as { google?: any }).google;
     if (!g?.translate?.TranslateElement) return;
     new g.translate.TranslateElement(
-      { pageLanguage: 'pt', includedLanguages: 'en,es', autoDisplay: false },
+      {
+        pageLanguage: 'pt',
+        includedLanguages: IDIOMAS_SITE.filter((i) => i.codigo !== 'pt')
+          .map((i) => i.codigo)
+          .join(','),
+        autoDisplay: false,
+      },
       'google_translate_element',
     );
   };

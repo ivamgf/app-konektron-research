@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { mensagemDeErro, post } from '../../lib/api';
 import { useIdiomas } from '../../lib/consultas';
 import type { ResumoRascunho } from './protocoloPassos';
@@ -6,7 +6,29 @@ import { BotaoIA } from '../../components/IA';
 
 type Resposta = { traducoes: Record<string, string>; aviso?: string };
 
-const palavras = (t: string) => (t.trim() ? t.trim().split(/\s+/).length : 0);
+export const palavras = (t: string) => (t.trim() ? t.trim().split(/\s+/).length : 0);
+
+/** Limite de palavras dos resumos, quando ligado (vale para todos os idiomas) */
+export const LIMITE_PALAVRAS = 250;
+
+/** Corta o texto depois da palavra de número `max`, mantendo a formatação (quebras de linha) do que fica */
+export function cortarPalavras(texto: string, max = LIMITE_PALAVRAS): string {
+  const re = /\S+/g;
+  let n = 0;
+  while (re.exec(texto)) {
+    if (++n === max) return /\S/.test(texto.slice(re.lastIndex)) ? texto.slice(0, re.lastIndex) : texto;
+  }
+  return texto;
+}
+
+const chaveLimite = (projetoId: string) => `konektron.resumo.limite250.${projetoId}`;
+function lerLimite(projetoId: string) {
+  try {
+    return localStorage.getItem(chaveLimite(projetoId)) === '1';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Passo "Resumo": um resumo por idioma (começa com português, inglês e espanhol), botão para
@@ -35,6 +57,17 @@ export function ResumosProtocolo({
   const [traduzindo, setTraduzindo] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  // limite de 250 palavras: lembrado por projeto neste navegador
+  const [limitar, setLimitar] = useState(() => lerLimite(projetoId));
+  useEffect(() => {
+    try {
+      localStorage.setItem(chaveLimite(projetoId), limitar ? '1' : '0');
+    } catch {
+      // navegador sem localStorage: o limite vale só nesta tela
+    }
+  }, [limitar, projetoId]);
+  const ajustar = (t: string) => (limitar ? cortarPalavras(t) : t);
+  const acima = resumos.filter((r) => palavras(r.texto) > LIMITE_PALAVRAS);
   const fonte = escritos.find((r) => r.idioma === origem) ?? escritos.find((r) => r.idioma === 'pt') ?? escritos[0];
 
   const atualizar = (i: number, parcial: Partial<ResumoRascunho>) =>
@@ -52,7 +85,9 @@ export function ResumosProtocolo({
         de: fonte.idioma,
         para,
       });
-      aoMudar(resumos.map((x) => (r.traducoes[x.idioma] !== undefined ? { ...x, texto: r.traducoes[x.idioma] } : x)));
+      aoMudar(
+        resumos.map((x) => (r.traducoes[x.idioma] !== undefined ? { ...x, texto: ajustar(r.traducoes[x.idioma]) } : x)),
+      );
       setAviso(
         `Traduzido do ${nome(fonte.idioma).toLowerCase()} para ${para.map((p) => nome(p).toLowerCase()).join(', ')}. ${r.aviso ?? 'Revise o texto.'}`,
       );
@@ -70,6 +105,41 @@ export function ResumosProtocolo({
         Resumo do protocolo em cada idioma (resumo, abstract, resumen). Escreva em um idioma e use a tradução automática
         para os demais — ela é um ponto de partida e deve ser revisada.
       </p>
+
+      <div className="d-flex flex-wrap align-items-center gap-2 border rounded p-2 mb-3 small">
+        <div className="form-check form-switch mb-0">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            role="switch"
+            id="limite-resumo"
+            checked={limitar}
+            disabled={somenteLeitura}
+            onChange={(e) => setLimitar(e.target.checked)}
+          />
+          <label className="form-check-label" htmlFor="limite-resumo">
+            Limitar a {LIMITE_PALAVRAS} palavras (todos os idiomas)
+          </label>
+        </div>
+        {limitar && acima.length > 0 && (
+          <>
+            <span className="text-danger">
+              <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
+              {acima.length} resumo(s) passam do limite
+            </span>
+            {!somenteLeitura && (
+              <button
+                type="button"
+                className="btn btn-outline-danger btn-sm"
+                onClick={() => aoMudar(resumos.map((r) => ({ ...r, texto: cortarPalavras(r.texto) })))}
+              >
+                <i className="bi bi-scissors me-1" aria-hidden="true" />
+                Cortar em {LIMITE_PALAVRAS} palavras
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
       {!somenteLeitura && escritos.length > 0 && (
         <div className="d-flex flex-wrap align-items-center gap-2 border rounded p-2 mb-3 small">
@@ -126,14 +196,18 @@ export function ResumosProtocolo({
               ))}
               {!lista.some((x) => x.codigo === r.idioma) && <option value={r.idioma}>{r.idioma}</option>}
             </select>
-            <span className="small text-secondary me-auto">{palavras(r.texto)} palavra(s)</span>
+            <span
+              className={`small me-auto ${limitar && palavras(r.texto) > LIMITE_PALAVRAS ? 'text-danger fw-medium' : 'text-secondary'}`}
+            >
+              {limitar ? `${palavras(r.texto)} / ${LIMITE_PALAVRAS} palavras` : `${palavras(r.texto)} palavra(s)`}
+            </span>
             {contextoIA && (
               <BotaoIA
                 campo={`Resumo em ${nome(r.idioma)}`}
-                orientacao={`Resumo estruturado do protocolo (objetivo, método, resultados esperados), entre 150 e 300 palavras, escrito em ${nome(r.idioma)}.`}
+                orientacao={`Resumo estruturado do protocolo (objetivo, método, resultados esperados), ${limitar ? `com no máximo ${LIMITE_PALAVRAS} palavras` : 'entre 150 e 300 palavras'}, escrito em ${nome(r.idioma)}.`}
                 contexto={contextoIA}
                 valor={r.texto}
-                aoAplicar={(texto) => atualizar(i, { texto })}
+                aoAplicar={(texto) => atualizar(i, { texto: ajustar(texto) })}
                 projetoId={projetoId}
                 desabilitado={somenteLeitura}
               />
@@ -174,7 +248,7 @@ export function ResumosProtocolo({
               rows={7}
               value={r.texto}
               readOnly={somenteLeitura}
-              onChange={(e) => atualizar(i, { texto: e.target.value })}
+              onChange={(e) => atualizar(i, { texto: ajustar(e.target.value) })}
             />
           </div>
         </div>
