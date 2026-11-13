@@ -6,6 +6,7 @@ const APP = 'Konektron Research';
 const FIXAS: Record<string, string> = {
   '/': 'Início',
   '/registrar': 'Cadastro de novos usuários',
+  '/faq': 'Perguntas frequentes',
   '/login': 'Entrar',
   '/esqueci-senha': 'Esqueci minha senha',
   '/redefinir-senha': 'Redefinir senha',

@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { LayoutPublico } from './LayoutPublico';
 import { CartoesPlanos, SeletorCiclo } from '../../components/CartoesPlanos';
 import type { Ciclo } from '../../lib/assinatura';
+import { BotaoTutorial } from './BotaoTutorial';
 
 const PASSOS = [
   {
@@ -122,6 +123,10 @@ export function Inicio() {
                     </a>
                   </>
                 )}
+                <BotaoTutorial className="btn btn-outline-light btn-lg px-4" />
+                <Link to="/faq" className="btn btn-link link-light btn-lg px-2">
+                  Perguntas frequentes
+                </Link>
               </div>
               <dl className="k-home-numeros mb-0">
                 {NUMEROS.map(([n, rotulo]) => (

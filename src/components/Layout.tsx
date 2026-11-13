@@ -60,6 +60,7 @@ const MENU = [
   { para: '/notificacoes', icone: 'bi-bell', texto: 'Notificações' },
   { para: '/perfil', icone: 'bi-person-circle', texto: 'Perfil' },
   { para: '/planos', icone: 'bi-stars', texto: 'Planos' },
+  { para: '/faq', icone: 'bi-question-circle', texto: 'Perguntas frequentes' },
 ];
 const MENU_ADMIN = [
   { para: '/admin/usuarios', icone: 'bi-people', texto: 'Usuários' },

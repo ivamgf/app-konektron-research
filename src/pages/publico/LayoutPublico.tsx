@@ -23,6 +23,9 @@ export function LayoutPublico({ children }: { children: ReactNode }) {
           <Link to="/planos" className="btn btn-link btn-sm text-decoration-none">
             Planos
           </Link>
+          <Link to="/faq" className="btn btn-link btn-sm text-decoration-none" title="Perguntas frequentes">
+            FAQ
+          </Link>
           <SeletorIdioma />
           {usuario ? (
             <Link to="/projetos" className="btn btn-primary btn-sm">

@@ -150,3 +150,44 @@ describe('Área logada', () => {
     expect(screen.queryByRole('heading', { name: 'Entrar' })).not.toBeInTheDocument();
   });
 });
+
+describe('Tutorial e perguntas frequentes', () => {
+  it('oferece o download do tutorial em PDF na página inicial', () => {
+    abrir('/');
+    const hero = screen.getByRole('region', { name: /Pesquisa científica/ });
+    const link = within(hero).getByRole('link', { name: /Baixar o tutorial \(PDF\)/ });
+    expect(link).toHaveAttribute('href', '/docs/tutorial-konektron-research.pdf');
+    expect(link).toHaveAttribute('download', 'Tutorial - Konektron Research.pdf');
+    expect(within(hero).getByRole('link', { name: 'Perguntas frequentes' })).toHaveAttribute('href', '/faq');
+  });
+
+  it('o arquivo do tutorial existe em public/docs', async () => {
+    const { existsSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    expect(existsSync(resolve(__dirname, '../../public/docs/tutorial-konektron-research.pdf'))).toBe(true);
+  });
+
+  it('abre o FAQ sem login, com temas, respostas e o tutorial', async () => {
+    abrir('/faq');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Perguntas frequentes' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Conta e planos' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Baixar o tutorial/ })).toHaveAttribute(
+      'href',
+      '/docs/tutorial-konektron-research.pdf',
+    );
+    const pergunta = screen.getByText('Quais formatos de arquivo posso importar nas buscas?');
+    const item = pergunta.closest('details')!;
+    expect(item).not.toHaveAttribute('open');
+    await userEvent.click(pergunta);
+    expect(item).toHaveAttribute('open');
+    expect(within(item).getByText(/RIS, NBIB, BibTeX/)).toBeInTheDocument();
+    expect(document.title).toBe('Perguntas frequentes · Konektron Research');
+  });
+
+  it('o cabeçalho público leva ao FAQ', () => {
+    abrir('/');
+    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
+    expect(within(nav).getByRole('link', { name: 'FAQ' })).toHaveAttribute('href', '/faq');
+  });
+});
