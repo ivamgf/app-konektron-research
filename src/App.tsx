@@ -37,6 +37,7 @@ const Convite = lazy(() => import('./pages/Convite'));
 const Usuarios = lazy(() => import('./pages/admin/Usuarios'));
 const Catalogos = lazy(() => import('./pages/admin/Catalogos'));
 const Planos = lazy(() => import('./pages/publico/Planos'));
+const Faq = lazy(() => import('./pages/publico/Faq'));
 
 export function App() {
   return (
@@ -49,6 +50,7 @@ export function App() {
           <Route path="/registrar" element={<Cadastro />} />
           <Route path="/cadastro" element={<Navigate to="/registrar" replace />} />
           <Route path="/planos" element={<Planos />} />
+          <Route path="/faq" element={<Faq />} />
           <Route path="/login" element={<Login />} />
           <Route path="/esqueci-senha" element={<EsqueciSenha />} />
           {/* links dos e-mails da API (APP_URL/...) */}
